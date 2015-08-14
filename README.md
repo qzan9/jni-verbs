@@ -2,9 +2,16 @@
 
 a JNI wrapper of native IB verbs API.
 
+InfiniBand refers to two distinctly different things:
+
+* a physical link-layer protocol for InfiniBand networks.
+
+* a higher level programming API called the InfiniBand Verbs API, which is an
+  implementation of RDMA technology.
+
 # Environment Setup #
 
-## OFED RDMA ##
+## OFED ##
 
 check the kernel modules
 
@@ -27,13 +34,19 @@ check the kernel modules
     iw_cm                   8867  1 rdma_cm
 ```
 
-under RHEL/CentOS, one lazy way to install OFED packages
+under RHEL/CentOS 6.x, one lazy way to install OFED packages
 
 ```
     # yum update
     # yum groupinstall "Infiniband Support"
+    # chkconfig rdma on
+    # chkconfig opensm on
+    # shutdown -r now
 ```
 
-with the HCA driver and mid-layer core alread loaded into the kernel, the
-"must-have" packages are `libmlx4`, `libmlx5` and `libmthca` and `libibverbs`.
+(for Mellanox hardware) with the HCA driver and mid-layer core alread loaded
+into the kernel, the "must-install" user-space packages are
+`libmlx4`/`libmlx5`/`libmthca` and `libibverbs`. additional configurations may
+need to be set up in `/etc/rdma/mlx4.conf` or `/etc/rdma/mlx5.conf` and
+`/etc/modprobe.d/mlx4.conf` or `/etc/modprobe.d/mlx5.conf`.
 
