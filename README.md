@@ -11,7 +11,7 @@ InfiniBand refers to two distinctly different things:
 
 # Environment Setup #
 
-## OFED ##
+## OFED RDMA Stack ##
 
 check the kernel modules
 
@@ -23,8 +23,6 @@ check the kernel modules
     ib_uverbs              36354  9 rdma_ucm
     ib_umad                11800  6
     ib_qib                395717  0
-    mlx5_ib                93490  0
-    mlx5_core              77850  1 mlx5_ib
     mlx4_ib               129782  1
     ib_sa                  23952  5 rdma_ucm,rdma_cm,ib_ipoib,ib_cm,mlx4_ib
     mlx4_core             213006  2 mlx4_en,mlx4_ib
@@ -38,8 +36,9 @@ check the kernel modules
     iw_cm                   8867  1 rdma_cm
 ```
 
-verify that `ib_uverbs` and low-level HW driver (in this case `mlx4_core`) are
-loaded.
+verify that low-level HW driver (in this case `mlx4_core` and `mlx4_ib`) and
+mid-layer core (`ib_core`, `ib_uverbs`, etc.) are loaded. you can customize
+RDMA modules in kernel's build menu `Device Drivers` -> `InfiniBand support`.
 
 under RHEL/CentOS 6.x, one lazy way to install OFED packages
 
@@ -51,11 +50,12 @@ under RHEL/CentOS 6.x, one lazy way to install OFED packages
     # shutdown -r now
 ```
 
-with the HCA driver and mid-layer core already loaded into the kernel, the
-"must-install" user-space packages are `libmlx4`/`libmlx5`/`libmthca` (for MLX
-hardware) and `libibverbs`.
+the "must-install" user-space packages are userspace driver (for Mellanox, it's
+`libmlx4` or `libmlx5` or `libmthca`) and verbs library (`libibverbs`). you may
+also need the RDMA communication management API (`librdmacm`).
 
-run `ibv_devices` to show the available RDMA devices in the local machine.
+to verify local RDMA device and query device attributes, use `ibv_devices` and
+`ibv_devinfo` (both contained in package `libibverbs-utils`)
 
 ```
     # ibv_devices
@@ -63,13 +63,7 @@ run `ibv_devices` to show the available RDMA devices in the local machine.
         ------              ----------------
         mlx4_0              0002c9030007d550
         mthca0              0002c90200282d08
-```
 
-run `ibv_devinfo` to open a device and query for its attributes. this verifies
-that the user and kernel part of RDMA stack can work together. make sure that
-at least one port is `PORT_ACTIVE`.
-
-```
     # ibv_devinfo -d mlx4_0
     hca_id: mlx4_0
             transport:                      InfiniBand (0)
