@@ -5,23 +5,16 @@ INC        := $(ROOT)/inc
 LIB        := $(ROOT)/lib
 SRC        := $(ROOT)/src/main/c
 
-# project directories
+# project directories and files
 PROJECTDIR := .
-OBJDIR     := obj
-OUTPUTDIR   = $(BIN)/examples
+OBJDIR     := $(PROJECTDIR)/obj
+OUTPUTDIR  := $(BIN)/examples
+
 OBJFILES   := $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(CFILES))) \
               $(patsubst %.cpp,$(OBJDIR)/%.o,$(notdir $(CCFILES)))
-TARGETFILE  = $(OUTPUTDIR)/$(PROJECT)
+TARGETFILE := $(OUTPUTDIR)/$(PROJECT)
 
 # compiler setup
-CC         := gcc
-CFLAGS      = -fPIC -std=c99 $(ARCH) $(DEBUG) $(INCLUDES)
-CXX        := g++
-CXXFLAGS    = -fPIC $(ARCH) $(DEBUG) $(INCLUDES)
-
-LINK       := g++
-LDFLAGS    := -fPIC -Wl,-rpath -Wl,\$$ORIGIN
-
 AMD64 = $(shell uname -m | grep 64)
 ifeq "$(strip $(AMD64))" ""
     ARCH   := -m32
@@ -38,7 +31,15 @@ else
 endif
 
 INCLUDES   := -I$(PROJECTDIR) -I$(INC)
-LIBRARIES   = -L$(LIB) -L$(OUTPUTDIR) -libverbs
+LIBRARIES  := -L$(LIB) -L$(OUTPUTDIR) -libverbs
+
+CC         := gcc
+CFLAGS     := -fPIC -std=c99 $(ARCH) $(DEBUG) $(INCLUDES)
+CXX        := g++
+CXXFLAGS   := -fPIC $(ARCH) $(DEBUG) $(INCLUDES)
+
+LINK       := g++
+LDFLAGS    := -fPIC -Wl,-rpath -Wl,\$$ORIGIN
 
 # misc.
 ifeq ($(quiet), 1)
