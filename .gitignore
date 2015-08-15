@@ -1,26 +1,31 @@
-# Object files
+# binary directories
+bin/
+lib/
+obj/
+
+# object files
 *.o
 *.ko
 *.obj
 *.elf
 
-# Precompiled Headers
+# precompiled headers
 *.gch
 *.pch
 
-# Libraries
+# libraries
 *.lib
 *.a
 *.la
 *.lo
 
-# Shared objects (inc. Windows DLLs)
+# shared objects
 *.dll
 *.so
 *.so.*
 *.dylib
 
-# Executables
+# executables
 *.exe
 *.out
 *.app
@@ -28,5 +33,9 @@
 *.x86_64
 *.hex
 
-# Debug files
+# debug files
 *.dSYM/
+
+# Vim temporary files
+*.swp
+*~
