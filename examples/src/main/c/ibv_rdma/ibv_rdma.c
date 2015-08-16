@@ -1,12 +1,12 @@
-#if HAVE_CONFIG_H
-#	include <config.h>
-#endif /* HAVE_CONFIG_H */
-
 #ifdef __GNUC__
 #	define _POSIX_C_SOURCE 200809L
 #	define _SVID_SOURCE
 #	define _GNU_SOURCE
-#endif
+#endif /* __GNUC__ */
+
+#if HAVE_CONFIG_H
+#	include <config.h>
+#endif /* HAVE_CONFIG_H */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,22 +24,20 @@
 #define TEST_Z(x,y)  do { if (!(x) ) die(y); } while (0)  /* if x is ZERO, error is printed */
 #define TEST_N(x,y)  do { if ((x)<0) die(y); } while (0)  /* if x is NEGATIVE, error is printed */
 
-static int sl = 1;
 static pid_t pid;
 
-struct app_context {    // full ibv context.
+struct rdma_context {    // full RDMA context.
 	struct ibv_context      *context;
 	struct ibv_pd           *pd;
 	struct ibv_mr           *mr;
 	struct ibv_cq           *rcq;
 	struct ibv_cq           *scq;
-	struct ibv_qp           *qp;
 	struct ibv_comp_channel *ch;
-	void                    *buf;
-	unsigned                 size;
-	int                      tx_depth;
+	struct ibv_qp           *qp;
 	struct ibv_sge           sge_list;
 	struct ibv_send_wr       wr;
+	void                    *buf;
+	unsigned                 size;
 };
 
 struct ib_connection {    // ib connection info (to be exchanged with peer).
@@ -50,8 +48,8 @@ struct ib_connection {    // ib connection info (to be exchanged with peer).
 	unsigned long long  vaddr;
 };
 
-struct app_data {    // user specified data.
-	int                   port;
+struct user_data {    // user specified data.
+	int                   sock_port;
 	int                   ib_port;
 	unsigned              size;
 	int                   tx_depth;
@@ -62,29 +60,29 @@ struct app_data {    // user specified data.
 	struct ibv_device    *ib_dev;
 };
 
-static struct app_context *init_ctx(struct app_data *data);
-static void destroy_ctx(struct app_context *ctx);
+static struct rdma_context *init_ctx(struct user_data *data);
+static void destroy_ctx(struct rdma_context *ctx);
 
-static void set_local_ib_connection(struct app_context *ctx, struct app_data *data);
+static void set_local_ib_connection(struct rdma_context *ctx, struct user_data *data);
 static void print_ib_connection(char *conn_name, struct ib_connection *conn);
 
-static int qp_change_state_init(struct ibv_qp *qp, struct app_data *data);
-static int qp_change_state_rtr (struct ibv_qp *qp, struct app_data *data);
-static int qp_change_state_rts (struct ibv_qp *qp, struct app_data *data);
+static int qp_change_state_init(struct ibv_qp *qp, struct user_data *data);
+static int qp_change_state_rtr (struct ibv_qp *qp, struct user_data *data);
+static int qp_change_state_rts (struct ibv_qp *qp, struct user_data *data);
 
-static void rdma_write(struct app_context *ctx, struct app_data *data);
+static void rdma_write(struct rdma_context *ctx, struct user_data *data);
 
-static int tcp_client_connect(struct app_data *data);
-static int tcp_server_listen(struct app_data *data);
-static int tcp_exch_ib_connection_info(struct app_data *data);
+static int tcp_client_connect(struct user_data *data);
+static int tcp_server_listen(struct user_data *data);
+static int tcp_exch_ib_connection_info(struct user_data *data);
 
 static int die(const char *reason);
 
 int main(int argc, char *argv[])
 {
-	struct app_context *ctx = NULL;
-	struct app_data data = {
-		.port              = 9999,
+	struct rdma_context *ctx = NULL;
+	struct user_data data = {
+		.sock_port         = 9999,
 		.ib_port           = 1,    // note: pick your active IB port.
 		.size              = 65536,
 		.tx_depth          = 64,
@@ -99,19 +97,14 @@ int main(int argc, char *argv[])
 	pid = getpid();
 	srand48(pid * time(NULL));    // later needed to create a random number for PSN.
 
-	if (!data.servername) {
-		printf("PID=%d | port=%d | ib_port=%d | size=%d | tx_depth=%d | sl=%d\n",
-			pid, data.port, data.ib_port, data.size, data.tx_depth, sl);
-	}
-
 	// initialize IB context.
-	TEST_Z(ctx = init_ctx(&data), "init_ctx failed to create ctx.");
+	ctx = init_ctx(&data);
 
-	// prepare IB info and exchange with peer through socket.
+	// prepare IB connection info and exchange with peer through socket.
 	set_local_ib_connection(ctx, &data);
 
 	if (data.servername) data.sockfd = tcp_client_connect(&data);
-	else TEST_N(data.sockfd = tcp_server_listen(&data), "tcp_server_listen failed.");
+	else data.sockfd = tcp_server_listen(&data);
 
 	TEST_NZ(tcp_exch_ib_connection_info(&data), "tcp_exch_ib_connection failed.");
 	print_ib_connection("local  connection", &data.local_connection);
@@ -124,26 +117,20 @@ int main(int argc, char *argv[])
 	// performance RDMA write.
 	if (!data.servername) {
 		printf("server: writing to client-buffer (RDMA-WRITE).\n");
-
-		char *chPtr = ctx->buf;
-		strcpy(chPtr, "read the f**ing source code :-)");    // note: edit the message to be written into clients buffer.
-
+		char *ch_ptr = ctx->buf;
+		strcpy(ch_ptr, "read the f**ing source code :-)");    // note: edit the message to be written into clients buffer.
 		rdma_write(ctx, &data);
 	} else {
-		printf("client: reading local-buffer (buffer that was registered with MR).\n");
-
-		char *chPtr = (char *)data.local_connection.vaddr;
-
-		while(1) if(strlen(chPtr) > 0) break;
-
-		printf("local buffer: %s\n", chPtr);
+		printf("client: reading local MR buffer.\n");
+		char *ch_ptr = (char *)data.local_connection.vaddr;
+		while(1) if (strlen(ch_ptr) > 0) break;
+		printf("local buffer: %s\n", ch_ptr);
 	}
 
-	printf("closing socket\n");
+	// release resources.
 	close(data.sockfd);
-
-	printf("destroying IB context\n");
 	destroy_ctx(ctx);
+	printf("exit.\n");
 
 	return 0;
 }
@@ -154,18 +141,17 @@ int main(int argc, char *argv[])
  * it creates structures for: ProtectionDomain, MemoryRegion, CompletionChannel,
  * Completion Queues, and Queue Pair.
  */
-static struct app_context *init_ctx(struct app_data *data)
+static struct rdma_context *init_ctx(struct user_data *data)
 {
-	struct app_context *ctx;
+	struct rdma_context *ctx;
 	struct ibv_device **dev_list;
 	struct ibv_device  *ib_dev;
 
 	int page_size;
 
-	ctx = malloc(sizeof *ctx);
+	// allocate and prepare the full RDMA context.
+	TEST_Z(ctx = malloc(sizeof *ctx), "init_ctx failed to allocate context.");
 	memset(ctx, 0, sizeof *ctx);
-
-	ctx->tx_depth = data->tx_depth;
 
 	// allocate and prepare the buffer.
 	page_size = sysconf(_SC_PAGESIZE);
@@ -195,7 +181,7 @@ static struct app_context *init_ctx(struct app_data *data)
 	       "create_comp_channel failed to create completion channel.");
 	TEST_Z(ctx->rcq = ibv_create_cq(ctx->context, 1, NULL, NULL, 0),
 	       "create_cq failed to create receive completion queue.");
-	TEST_Z(ctx->scq = ibv_create_cq(ctx->context, ctx->tx_depth, ctx, ctx->ch, 0),
+	TEST_Z(ctx->scq = ibv_create_cq(ctx->context, data->tx_depth, ctx, ctx->ch, 0),
 	       "create_cq failed to create send completion queue.");
 
 	// create the queue pair.
@@ -204,7 +190,7 @@ static struct app_context *init_ctx(struct app_data *data)
 		.recv_cq = ctx->rcq,
 		.qp_type = IBV_QPT_RC,
 		.cap = {
-			.max_send_wr     = ctx->tx_depth,
+			.max_send_wr     = data->tx_depth,
 			.max_recv_wr     = 1,
 			.max_send_sge    = 1,
 			.max_recv_sge    = 1,
@@ -220,7 +206,7 @@ static struct app_context *init_ctx(struct app_data *data)
 	return ctx;
 }
 
-static void destroy_ctx(struct app_context *ctx)
+static void destroy_ctx(struct rdma_context *ctx)
 {
 
 	TEST_NZ(ibv_destroy_qp(ctx->qp), "destroy_qp failed to destroy queue pair.");
@@ -253,7 +239,7 @@ static void destroy_ctx(struct app_context *ctx)
  *
  * - vaddr - Virtual Address, memory address that peer can later write to.
  */
-static void set_local_ib_connection(struct app_context *ctx, struct app_data *data)
+static void set_local_ib_connection(struct rdma_context *ctx, struct user_data *data)
 {
 	struct ibv_port_attr attr;
 
@@ -271,13 +257,12 @@ static void print_ib_connection(char *conn_name, struct ib_connection *conn)
 {
 	printf("%s: LID %#04x, QPN %#06x, PSN %#06x, RKey %#08x, VAddr %#016Lx\n",
 	       conn_name, conn->lid, conn->qpn, conn->psn, conn->rkey, conn->vaddr);
-
 }
 
 /*
  * qp_change_state_init sets Queue Pair status to INIT.
  */
-static int qp_change_state_init(struct ibv_qp *qp, struct app_data *data)
+static int qp_change_state_init(struct ibv_qp *qp, struct user_data *data)
 {
 	struct ibv_qp_attr *attr;
 
@@ -304,7 +289,7 @@ static int qp_change_state_init(struct ibv_qp *qp, struct app_data *data)
 /*
  * qp_change_state_rtr sets Queue Pair status to RTR (Ready to Receive).
  */
-static int qp_change_state_rtr(struct ibv_qp *qp, struct app_data *data)
+static int qp_change_state_rtr(struct ibv_qp *qp, struct user_data *data)
 {
 	struct ibv_qp_attr *attr;
 
@@ -319,7 +304,7 @@ static int qp_change_state_rtr(struct ibv_qp *qp, struct app_data *data)
 	attr->min_rnr_timer         = 12;
 	attr->ah_attr.is_global     = 0;
 	attr->ah_attr.dlid          = data->remote_connection->lid;
-	attr->ah_attr.sl            = sl;
+	attr->ah_attr.sl            = 1;
 	attr->ah_attr.src_path_bits = 0;
 	attr->ah_attr.port_num      = data->ib_port;
 
@@ -343,7 +328,7 @@ static int qp_change_state_rtr(struct ibv_qp *qp, struct app_data *data)
  *
  * note that QP status has to be RTR before changing it to RTS
  */
-static int qp_change_state_rts(struct ibv_qp *qp, struct app_data *data)
+static int qp_change_state_rts(struct ibv_qp *qp, struct user_data *data)
 {
 	qp_change_state_rtr(qp, data);
 
@@ -376,7 +361,7 @@ static int qp_change_state_rts(struct ibv_qp *qp, struct app_data *data)
 /*
  *  rdma_write writes 'ctx-buf' into buffer of peer.
  */
-static void rdma_write(struct app_context *ctx, struct app_data *data)
+static void rdma_write(struct rdma_context *ctx, struct user_data *data)
 {
 	struct ibv_send_wr *bad_wr;
 
@@ -422,7 +407,7 @@ static void rdma_write(struct app_context *ctx, struct app_data *data)
 */
 }
 
-static int tcp_client_connect(struct app_data *data)
+static int tcp_client_connect(struct user_data *data)
 {
 	char *service;
 	int n;
@@ -435,10 +420,11 @@ static int tcp_client_connect(struct app_data *data)
 		.ai_socktype = SOCK_STREAM
 	};
 
-	TEST_N(asprintf(&service, "%d", data->port), "error writing port-number to port-string.");
+	TEST_N(asprintf(&service, "%d", data->sock_port), "error writing port-number to port-string.");
 
 	TEST_N(getaddrinfo(data->servername, service, &hints, &res), "getaddrinfo failed.");
 
+	printf("client: connecting to server ...\n");
 	for (t = res; t; t = t->ai_next) {
 		TEST_N(sockfd = socket(t->ai_family, t->ai_socktype, t->ai_protocol), "failed to create client socket.");
 		TEST_N(connect(sockfd, t->ai_addr, t->ai_addrlen), "failed to connect to server");
@@ -449,7 +435,7 @@ static int tcp_client_connect(struct app_data *data)
 	return sockfd;
 }
 
-static int tcp_server_listen(struct app_data *data)
+static int tcp_server_listen(struct user_data *data)
 {
 	char *service;
 	int n, connfd;
@@ -463,7 +449,7 @@ static int tcp_server_listen(struct app_data *data)
 		.ai_socktype = SOCK_STREAM
 	};
 
-	TEST_N(asprintf(&service, "%d", data->port), "error writing port-number to port-string.");
+	TEST_N(asprintf(&service, "%d", data->sock_port), "error writing port-number to port-string.");
 
 	TEST_N(n = getaddrinfo(NULL, service, &hints, &res), "getaddrinfo failed.");
 
@@ -472,6 +458,8 @@ static int tcp_server_listen(struct app_data *data)
 	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &n, sizeof n);
 
 	TEST_N(bind(sockfd, res->ai_addr, res->ai_addrlen), "failed to bind addr to server socket.");
+
+	printf("server: waiting for client to connect ...\n");
 
 	listen(sockfd, 1);
 
@@ -482,7 +470,7 @@ static int tcp_server_listen(struct app_data *data)
 	return connfd;
 }
 
-static int tcp_exch_ib_connection_info(struct app_data *data)
+static int tcp_exch_ib_connection_info(struct user_data *data)
 {
 	char msg[sizeof "0000:000000:000000:00000000:0000000000000000"];
 	int parsed;
