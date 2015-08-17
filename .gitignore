@@ -2,6 +2,8 @@
 bin/
 lib/
 obj/
+target/
+out/
 
 # object files
 *.o
@@ -39,3 +41,10 @@ obj/
 # Vim temporary files
 *.swp
 *~
+
+# Intellij Idea files
+.idea
+*.iml
+
+# misc.
+*.log
