@@ -1,51 +1,65 @@
 # global directory layout
-ROOT       := ../../../..
-BIN        := $(ROOT)/../bin
-INC        := $(ROOT)/inc
-LIB        := $(ROOT)/lib
-SRC        := $(ROOT)/src/main/c
+ROOT         := ../../../..
+BIN          := $(ROOT)/../bin
+INC          := $(ROOT)/inc
+LIB          := $(ROOT)/lib
+SRC          := $(ROOT)/src/main/c
 
 # project directories and files
-PROJECTDIR := .
-OBJDIR     := $(PROJECTDIR)/obj
-OUTPUTDIR  := $(BIN)/examples
+PROJECTDIR   := .
+OBJDIR       := $(PROJECTDIR)/obj
+OUTPUTDIR    := $(BIN)/examples
 
-OBJFILES   := $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(CFILES))) \
-              $(patsubst %.cpp,$(OBJDIR)/%.o,$(notdir $(CCFILES)))
-TARGETFILE := $(OUTPUTDIR)/$(PROJECT)
+OBJFILES     := $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(CFILES))) \
+                $(patsubst %.cpp,$(OBJDIR)/%.o,$(notdir $(CCFILES)))
+TARGETFILE   := $(OUTPUTDIR)/$(PROJECT)
+
+# Java path
+JAVA_HOME    := /opt/jdk7
 
 # compiler setup
 AMD64 = $(shell uname -m | grep 64)
 ifeq "$(strip $(AMD64))" ""
-    ARCH   := -m32
+    ARCH     := -m32
 else
-    ARCH   := -m64
+    ARCH     := -m64
 endif
 
 ifeq ($(dbg),1)
-    DEBUG  := -g -D_DEBUG
-    CONFIG := debug
+    DEBUG    := -g -D_DEBUG
+    CONFIG   := debug
 else
-    DEBUG  := -O2 -fno-strict-aliasing
-    CONFIG := release
+    DEBUG    := -O2 -fno-strict-aliasing
+    CONFIG   := release
 endif
 
-INCLUDES   := -I$(PROJECTDIR) -I$(INC)
-LIBRARIES  := -L$(LIB) -L$(OUTPUTDIR) -libverbs
+INCLUDES     := -I$(PROJECTDIR) -I$(INC)
+ifeq ($(jni),1)
+    INCLUDES += -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux
+endif
 
-CC         := gcc
-CFLAGS     := -fPIC -std=c99 $(ARCH) $(DEBUG) $(INCLUDES)
-CXX        := g++
-CXXFLAGS   := -fPIC $(ARCH) $(DEBUG) $(INCLUDES)
+LIBRARIES    := -L$(LIB) -L$(OUTPUTDIR)
+ifeq ($(rdma),1)
+   LIBRARIES += -libverbs
+endif
 
-LINK       := g++
-LDFLAGS    := -fPIC -Wl,-rpath -Wl,\$$ORIGIN
+CC           := gcc
+CFLAGS       := -fPIC -std=c99 $(ARCH) $(DEBUG) $(INCLUDES)
+CXX          := g++
+CXXFLAGS     := -fPIC $(ARCH) $(DEBUG) $(INCLUDES)
+
+LINK         := g++
+LDFLAGS      := -fPIC -Wl,-rpath -Wl,\$$ORIGIN
+ifeq ($(shared),1)
+     LDFLAGS += -shared
+  TARGETFILE := $(addsuffix .so,$(TARGETFILE))
+endif
 
 # misc.
 ifeq ($(quiet), 1)
-    QUIET  := @
+    QUIET    := @
 else
-    QUIET  :=
+    QUIET    :=
 endif
 
 # build rules
