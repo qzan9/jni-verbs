@@ -35,6 +35,9 @@ out/
 *.x86_64
 *.hex
 
+# test source and binary files
+test/
+
 # debug files
 *.dSYM/
 
