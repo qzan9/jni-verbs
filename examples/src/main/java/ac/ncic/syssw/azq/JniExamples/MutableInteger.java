@@ -6,7 +6,7 @@
 package ac.ncic.syssw.azq.JniExamples;
 
 /**
- * A mutable integer type.
+ * A simple mutable integer type.
  *
  * <p>
  * This class is used to simulate C pointer behavior.
@@ -16,17 +16,17 @@ package ac.ncic.syssw.azq.JniExamples;
  * @author azq
  */
 public class MutableInteger {
-	private int value;
+	private long value;
 
-	public MutableInteger(int value) {
+	public MutableInteger(long value) {
 		this.value = value;
 	}
 
-	public void set(int value) {
+	public void set(long value) {
 		this.value = value;
 	}
 
-	public int intValue() {
+	public long intValue() {
 		return this.value;
 	}
 }
