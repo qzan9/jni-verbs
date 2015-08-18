@@ -15,11 +15,11 @@ extern "C" {
 JNIEXPORT jint JNICALL JNI_Onload  (JavaVM *, void *);
 JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *, void *);
 
-JNIEXPORT jlong JNICALL ibvGetDeviceList(JNIEnv *, jobject, jobject);
-JNIEXPORT void JNICALL ibvFreeDeviceList(JNIEnv *, jobject, jlong);
+JNIEXPORT jlong JNICALL ibvGetDeviceList (JNIEnv *, jobject, jobject);
+JNIEXPORT void  JNICALL ibvFreeDeviceList(JNIEnv *, jobject, jlong);
 
 JNIEXPORT jstring JNICALL ibvGetDeviceName(JNIEnv *, jobject, jlong, jint);
-JNIEXPORT jlong JNICALL ibvGetDeviceGUID(JNIEnv *, jobject, jlong, jint);
+JNIEXPORT jlong   JNICALL ibvGetDeviceGUID(JNIEnv *, jobject, jlong, jint);
 
 #ifdef __cplusplus
 }
