@@ -18,23 +18,42 @@ final class IBVerbsNative {
 	private IBVerbsNative() {}
 
 	/**
-	 * A wrapper around <code></>ibv_get_device_list()</code>.
+	 * A wrapper around <code>ibv_get_device_list()</code>.
 	 *
-	 * @param devNum the device number will be written to it; it has to be an
-	 *        allocated object.
+	 * <p>
+	 * TODO return an object array of custom class `IbvDevice`.
+	 * <p>
+	 * But that kind of passing back means that much more data will have to go
+	 * through JNI, which I'd like to avoid.
+	 *
+	 * @param devNum to which the number of devices will be written.
 	 *
 	 * @return the value of <code>struct ibv_device **dev_list</code>, or the
-	 *         virtual address of device list.
+	 *         virtual address of device list. be cautious, this is considered
+	 *         unsafe in Java.
 	 */
-	static native long ibvGetDeviceList(MutableInteger devNum);
+	static native long ibvGetDeviceList(MutableInteger devNum) throws JNIVerbsException;
 
 	/**
 	 * Direct call into <code>ibv_free_device_list()</code>.
 	 *
-	 * @param devList the address value of <code>**dev_list</code>.
+	 * @param devListAddr the address value of <code>**dev_list</code>.
 	 */
-	static native void ibvFreeDeviceList(long devList);
+	static native void ibvFreeDeviceList(long devListAddr);
 
-	static native String ibvGetDeviceName(long devList, int devId);
-	static native long ibvGetDeviceGUID(long devList, int devId);
+	/**
+	 * Invoke <code>ibv_get_device_name</code> and return.
+	 *
+	 * @param devListAddr the pointer/address of device list array.
+	 *
+	 * @param devId the device id (0, 1, 2, ...).
+	 *
+	 * @return the name of the device as a Java String.
+	 */
+	static native String ibvGetDeviceName(long devListAddr, int devId);
+
+	/**
+	 * @see #ibvGetDeviceName(long, int)
+	 */
+	static native long ibvGetDeviceGUID(long devListAddr, int devId);
 }
