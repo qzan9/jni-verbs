@@ -9,16 +9,22 @@ import static ac.ncic.syssw.azq.JniExamples.IBVerbsNative.*;
 
 public class Main {
 	public static void main(String[] args) {
+		long devListAddr = -1;
 		try {
 			MutableInteger devNum = new MutableInteger(-1);
-			long devList = ibvGetDeviceList(devNum);
-			System.out.printf("virtual address of device list: %#x.\n", devList);
+			devListAddr = ibvGetDeviceList(devNum);
+			System.out.printf("virtual address of device list: %#x.\n", devListAddr);
 			System.out.printf("%d devices found.\n", devNum.intValue());
 			for (int i = 0; i < devNum.intValue(); i++)
-				System.out.printf("%d: %s %#x\n", i, ibvGetDeviceName(devList, i), ibvGetDeviceGUID(devList, i));
-			IBVerbsNative.ibvFreeDeviceList(devList);
-		} catch (Exception e) {
+				System.out.printf("%d: %s %#x\n", i, ibvGetDeviceName(devListAddr, i), ibvGetDeviceGUID(devListAddr, i));
+		} catch (JNIVerbsException e) {
 			System.out.println(e.getMessage());
+			System.out.println("check your IB/OFED configuration!");
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (devListAddr != -1)    // this is not safe for Java.
+				ibvFreeDeviceList(devListAddr);
 		}
 	}
 }
