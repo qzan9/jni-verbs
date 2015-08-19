@@ -15,7 +15,8 @@ final class JniVerbs {
 		System.loadLibrary("jniverbs");
 	}
 
-	private JniVerbs() {}
+	private JniVerbs() {
+	}
 
 	/**
 	 * A wrapper around <code>ibv_get_device_list()</code>.

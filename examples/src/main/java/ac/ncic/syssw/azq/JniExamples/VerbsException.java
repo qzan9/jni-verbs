@@ -6,28 +6,23 @@
 package ac.ncic.syssw.azq.JniExamples;
 
 public class VerbsException extends Exception {
-	public VerbsException()
-	{
+	public VerbsException() {
 	}
 
-	public VerbsException(String message)
-	{
+	public VerbsException(String message) {
 		super(message);
 	}
 
-	public VerbsException(Throwable cause)
-	{
+	public VerbsException(Throwable cause) {
 		super(cause);
 	}
 
-	public VerbsException(String message, Throwable cause)
-	{
+	public VerbsException(String message, Throwable cause) {
 		super(message, cause);
 	}
 
 	public VerbsException(String message, Throwable cause,
-	                      boolean enableSuppression, boolean writableStackTrace)
-	{
+	                      boolean enableSuppression, boolean writableStackTrace) {
 		super(message, cause, enableSuppression, writableStackTrace);
 	}
 }
