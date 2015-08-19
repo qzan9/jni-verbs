@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2015, AZQ. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- */
-
 #ifdef __GNUC__
 #	define _POSIX_C_SOURCE 200809L
 #	define _SVID_SOURCE
