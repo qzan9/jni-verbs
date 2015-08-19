@@ -37,9 +37,9 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved)
 		return JNI_ERR;
 	}
 
-//	if (env->RegisterNatives(env->FindClass("Lac/ncic/syssw/azq/JniExamples/VerbsNative;"),
+//	if (env->RegisterNatives(env->FindClass("Lac/ncic/syssw/azq/JniExamples/JniVerbs;"),
 	if ((*env)->RegisterNatives(env,
-	                            (*env)->FindClass(env, "Lac/ncic/syssw/azq/JniExamples/IBVerbsNative;"),
+	                            (*env)->FindClass(env, "Lac/ncic/syssw/azq/JniExamples/JniVerbs;"),
 	                            methods,
 	                            sizeof(methods) / sizeof(methods[0])
 	                           ) < -1) {

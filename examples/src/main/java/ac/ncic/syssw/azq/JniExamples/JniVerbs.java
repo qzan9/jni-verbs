@@ -10,12 +10,12 @@ package ac.ncic.syssw.azq.JniExamples;
  *
  * @author azq
  */
-final class IBVerbsNative {
+final class JniVerbs {
 	static {
 		System.loadLibrary("jniverbs");
 	}
 
-	private IBVerbsNative() {}
+	private JniVerbs() {}
 
 	/**
 	 * A wrapper around <code>ibv_get_device_list()</code>.

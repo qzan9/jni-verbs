@@ -5,7 +5,7 @@
 
 package ac.ncic.syssw.azq.JniExamples;
 
-import static ac.ncic.syssw.azq.JniExamples.IBVerbsNative.*;
+import static ac.ncic.syssw.azq.JniExamples.JniVerbs.*;
 
 public class Main {
 	public static void main(String[] args) {
