@@ -6,7 +6,7 @@
 package ac.ncic.syssw.azq.JniExamples;
 
 /**
- * A collection of native methods for accessing native RDMA verbs APIs.
+ * A collection of native methods for accessing native IB verbs APIs.
  *
  * @author azq
  */
@@ -20,12 +20,6 @@ final class IBVerbsNative {
 	/**
 	 * A wrapper around <code>ibv_get_device_list()</code>.
 	 *
-	 * <p>
-	 * TODO return an object array of custom class `IbvDevice`.
-	 * <p>
-	 * But that kind of passing back means that much more data will have to go
-	 * through JNI, which I'd like to avoid.
-	 *
 	 * @param devNum to which the number of devices will be written.
 	 *
 	 * @return the value of <code>struct ibv_device **dev_list</code>, or the
@@ -33,6 +27,17 @@ final class IBVerbsNative {
 	 *         unsafe in Java.
 	 */
 	static native long ibvGetDeviceList(MutableInteger devNum) throws JNIVerbsException;
+
+	/**
+	 * Another wrapper around <code>ibv_get_device_list()</code>.
+	 *
+	 * <p>
+	 * TODO Object should be a peer Java class for struct ibv_device, and how to handle the device list pointer???
+	 * <p>
+	 * This kind of passing back means that much more data will have to go
+	 * through JNI, which I'd like to avoid.
+	 */
+	static native Object[] ibvGetDeviceList() throws JNIVerbsException;
 
 	/**
 	 * Direct call into <code>ibv_free_device_list()</code>.
