@@ -26,7 +26,7 @@ final class JniVerbs {
 	 *         virtual address of device list. be cautious, this is considered
 	 *         unsafe in Java.
 	 */
-	static native long ibvGetDeviceList(MutableInteger devNum) throws JniVerbsException;
+	static native long ibvGetDeviceList(MutableInteger devNum) throws VerbsException;
 
 	/**
 	 * Another wrapper around <code>ibv_get_device_list()</code>.
@@ -37,7 +37,7 @@ final class JniVerbs {
 	 * This kind of passing back means that much more data will have to go
 	 * through JNI, which I'd like to avoid.
 	 */
-	static native Object[] ibvGetDeviceList() throws JniVerbsException;
+	static native Object[] ibvGetDeviceList() throws VerbsException;
 
 	/**
 	 * Direct call into <code>ibv_free_device_list()</code>.

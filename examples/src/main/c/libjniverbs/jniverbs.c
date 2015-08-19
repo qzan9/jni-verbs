@@ -94,7 +94,7 @@ static int bluepill(JNIEnv *env, const char *msg)
 {
 	fprintf(stderr, "error: %s - %s\n", strerror(errno), msg);
 //	exit(EXIT_FAILURE);
-	throwException(env, "Lac/ncic/syssw/azq/JniExamples/JniVerbsException;", msg);
+	throwException(env, "Lac/ncic/syssw/azq/JniExamples/VerbsException;", msg);
 	return -1;
 }
 

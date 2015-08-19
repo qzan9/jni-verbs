@@ -17,7 +17,7 @@ public class Main {
 			System.out.printf("%d devices found.\n", devNum.intValue());
 			for (int i = 0; i < devNum.intValue(); i++)
 				System.out.printf("%d: %s %#x\n", i, ibvGetDeviceName(devListAddr, i), ibvGetDeviceGUID(devListAddr, i));
-		} catch (JniVerbsException e) {
+		} catch (VerbsException e) {
 			System.out.println(e.getMessage());
 			System.out.println("check your IB/OFED configuration!");
 		} catch (Exception e) {
