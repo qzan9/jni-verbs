@@ -5,27 +5,27 @@
 
 package ac.ncic.syssw.azq.JniExamples;
 
-public class JNIVerbsException extends Exception {
-	public JNIVerbsException()
+public class JniVerbsException extends Exception {
+	public JniVerbsException()
 	{
 	}
 
-	public JNIVerbsException(String message)
+	public JniVerbsException(String message)
 	{
 		super(message);
 	}
 
-	public JNIVerbsException(Throwable cause)
+	public JniVerbsException(Throwable cause)
 	{
 		super(cause);
 	}
 
-	public JNIVerbsException(String message, Throwable cause)
+	public JniVerbsException(String message, Throwable cause)
 	{
 		super(message, cause);
 	}
 
-	public JNIVerbsException(String message, Throwable cause,
+	public JniVerbsException(String message, Throwable cause,
 	                         boolean enableSuppression, boolean writableStackTrace)
 	{
 		super(message, cause, enableSuppression, writableStackTrace);
