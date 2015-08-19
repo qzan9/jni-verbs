@@ -13,7 +13,7 @@ InfiniBand refers to two distinctly different things:
 
 ## OFED RDMA Stack ##
 
-check the kernel modules
+(LINUX) check the kernel modules
 
 ```
     # lsmod | grep -i ib
@@ -93,4 +93,24 @@ to verify local RDMA device and query device attributes, use `ibv_devices` and
                             port_lmc:               0x00
                             link_layer:             InfiniBand
 ```
+
+## JVM/JDK ##
+
+Oracle/Sun HotSpot JVM 1.7 is recommended.
+
+to configure Java environemnt, download the JDK tarball (from Oracle) and
+extract (to your home directory or some other global locations) and set-up
+(`$JAVA_HOME`, `PATH`, etc.), or simply (under Ubuntu 14.04)
+
+```
+    $ sudo apt-add-repository ppa:webupd8team/java
+    $ sudo apt-get update
+    $ sudo apt-get install oracle-java7-installer
+    $ sudo apt-get install oracle-java7-set-default
+```
+
+note that `JNI_VERSION_1_6` is required.
+
+Maven is recommended to compile the codes and build the jar. Eclipse and Idea
+would also be able to do the job.
 
