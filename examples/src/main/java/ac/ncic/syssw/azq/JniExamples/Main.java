@@ -5,11 +5,14 @@
 
 package ac.ncic.syssw.azq.JniExamples;
 
-import static ac.ncic.syssw.azq.JniExamples.JniVerbs.*;
+//import static ac.ncic.syssw.azq.JniExamples.JniVerbs.*;
+import java.nio.ByteBuffer;
+
+import static ac.ncic.syssw.azq.JniExamples.JniRdma.*;
 
 public class Main {
 	public static void main(String[] args) {
-		long devListAddr = -1;
+		/*long devListAddr = -1;
 		try {
 			MutableInteger devNum = new MutableInteger(-1);
 			devListAddr = ibvGetDeviceList(devNum);
@@ -25,6 +28,30 @@ public class Main {
 		} finally {
 			if (devListAddr != -1)    // this is not safe for Java.
 				ibvFreeDeviceList(devListAddr);
+		}*/
+
+		try {
+			RdmaUserConfig userConfig = new RdmaUserConfig(65536, 9999, (args.length == 0) ? null : args[0]);
+			ByteBuffer buffer = rdmaContextInit(userConfig);
+			if (args.length == 0) {
+				String str = "Read the f**ing source code :-)";
+				buffer.putInt(str.length());
+				buffer.put(str.getBytes());
+				System.out.println("server writing to client (RDMA).");
+				rdmaWrite();
+			} else {
+				while(true) if (buffer.getInt(0) > 0) break;
+				byte[] bytes = new byte[buffer.getInt()];
+				buffer.get(bytes);
+				String str = new String(bytes);
+				System.out.println(str);
+			}
+		} catch (RdmaException e) {
+			System.out.println("check your IB/OFED configuration!");
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			rdmaResourceRelease();
 		}
 	}
 }
