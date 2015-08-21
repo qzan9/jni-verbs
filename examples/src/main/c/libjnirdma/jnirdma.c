@@ -84,7 +84,6 @@ static int modify_qp_state_rts (struct rdma_context *);
 static int set_local_ib_conn(struct rdma_context *);
 static int print_ib_conn(const char *, struct ib_conn *);
 
-
 static int tcp_server_listen(struct user_config *);
 static int tcp_client_connect(struct user_config *);
 static int tcp_exch_ib_conn_info(struct rdma_context *);
@@ -158,7 +157,9 @@ JNIEXPORT void JNICALL rdmaWrite(JNIEnv *env, jobject this)
 
 JNIEXPORT void JNICALL rdmaFree(JNIEnv *env, jobject this)
 {
-	(*env)->ReleaseStringUTFChars(env, NULL, ucfg.server_name);
+	if (ucfg.server_name)
+		(*env)->ReleaseStringUTFChars(env, NULL, ucfg.server_name);
+
 	if (destroy(&rctx))
 //		exit(EXIT_FAILURE);
 		;
@@ -377,7 +378,7 @@ static int modify_qp_state_init(struct rdma_context *rctx)
 	                       IBV_QP_PKEY_INDEX |
 	                       IBV_QP_PORT       |
 	                       IBV_QP_ACCESS_FLAGS),
-                 "failed to modify QP to INIT state!");
+	         "ibv_modify_qp (set INIT) failed!");
 
 	return 0;
 }
@@ -406,7 +407,7 @@ static int modify_qp_state_rtr(struct rdma_context *rctx)
 	                       IBV_QP_RQ_PSN             |
 	                       IBV_QP_MAX_DEST_RD_ATOMIC |
 	                       IBV_QP_MIN_RNR_TIMER),
-                 "failed to modify QP to RTR state!");
+	         "ibv_modify_qp (set RTR) failed!");
 
 	return 0;
 }
@@ -431,7 +432,7 @@ static int modify_qp_state_rts(struct rdma_context *rctx)
 	                       IBV_QP_RNR_RETRY |
 	                       IBV_QP_SQ_PSN    |
 	                       IBV_QP_MAX_QP_RD_ATOMIC),
-	         "failed to modify QP to RTS state!");
+	         "ibv_modify_qp (set RTS) failed!");
 
 	return 0;
 }
