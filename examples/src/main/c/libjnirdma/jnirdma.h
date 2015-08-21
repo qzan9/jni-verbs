@@ -15,11 +15,9 @@ extern "C" {
 JNIEXPORT jint JNICALL JNI_Onload  (JavaVM *, void *);
 JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *, void *);
 
-JNIEXPORT jobject JNICALL rdmaContextInit(JNIEnv *, jobject, jobject);
-JNIEXPORT void  JNICALL rdmaResourceRelease(JNIEnv *, jobject);
-
-JNIEXPORT void JNICALL rdmaWrite(JNIEnv *, jobject);
-JNIEXPORT void JNICALL rdmaRead (JNIEnv *, jobject);
+JNIEXPORT jobject JNICALL rdmaSetUp(JNIEnv *, jobject, jobject);
+JNIEXPORT void    JNICALL rdmaWrite(JNIEnv *, jobject);
+JNIEXPORT void    JNICALL rdmaFree (JNIEnv *, jobject);
 
 #ifdef __cplusplus
 }

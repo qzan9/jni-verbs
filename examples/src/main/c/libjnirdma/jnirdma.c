@@ -22,16 +22,28 @@
 #include <jni.h>
 #include "jnirdma.h"
 
-#define IBV_NZI(env,ibv,msg) do { if ( (ibv) ) return bpill((env),(msg)); } while (0)    /* if ibv is NON-ZERO, throw exception and return -1. */
-#define IBV_ZI(env,ibv,msg)  do { if (!(ibv) ) return bpill((env),(msg)); } while (0)    /* if ibv is ZERO,     throw exception and return -1. */
-#define IBV_NI(env,ibv,msg)  do { if ((ibv)<0) return bpill((env),(msg)); } while (0)    /* if ibv is NEGATIVE, throw exception and return -1. */
+#define CHK_NZI(x) do { if ( (x) ) return -1; } while (0)    /* if x is NON-ZERO, return -1.   */
+#define CHK_ZI(x)  do { if (!(x) ) return -1; } while (0)    /* if x is ZERO,     return -1.   */
+#define CHK_NI(x)  do { if ((x)<0) return -1; } while (0)    /* if x is NEGATIVE, return -1.   */
 
-#define CHK_NZN(x) do { if ((x)) return NULL; } while (0)    /* if x is NON-ZERO, return -1. */
-#define CHK_NZI(x) do { if ((x)) return -1; } while (0)    /* if x is NON-ZERO, return -1. */
-#define CHK_ZI(x)  do { if (!(x)) return -1; } while (0)    /* if x is ZERO, return -1. */
-#define CHK_NI(x)  do { if ((x)<0) return -1; } while (0)    /* if x is NEGATIVE, return -1. */
+#define CHKP_NZI(x,msg) do { if ( (x) ) { fprintf(stderr, "error: %s\n", (msg)); return -1; } } while (0)
+#define CHKP_ZI(x,msg)  do { if (!(x) ) { fprintf(stderr, "error: %s\n", (msg)); return -1; } } while (0)
+#define CHKP_NI(x,msg)  do { if ((x)<0) { fprintf(stderr, "error: %s\n", (msg)); return -1; } } while (0)
 
-struct ib_connection {
+#define CHKE_NZI(x,msg) do { if ( (x) ) { fprintf(stderr, "error: %s - %s\n", strerror(errno), (msg)); return -1; } } while (0)
+#define CHKE_ZI(x,msg)  do { if (!(x) ) { fprintf(stderr, "error: %s - %s\n", strerror(errno), (msg)); return -1; } } while (0)
+#define CHKE_NI(x,msg)  do { if ((x)<0) { fprintf(stderr, "error: %s - %s\n", strerror(errno), (msg)); return -1; } } while (0)
+
+struct user_config {
+	int       ib_dev;
+	int       ib_port;
+	unsigned  buffer_size;
+
+	char     *server_name;
+	int       sock_port;
+};
+
+struct ib_conn {
 	int                 lid;
 	int                 qpn;
 	int                 psn;
@@ -44,57 +56,52 @@ struct rdma_context {
 	struct ibv_context      *dev_ctx;
 	struct ibv_pd           *pd;
 	struct ibv_mr           *mr;
-	struct ibv_cq           *rcq;
-	struct ibv_cq           *scq;
 	struct ibv_comp_channel *ch;
+	struct ibv_cq           *scq;
+	struct ibv_cq           *rcq;
 	struct ibv_qp           *qp;
 	struct ibv_sge           sge_list;
 	struct ibv_send_wr       wr;
+	int                      port_num;
 	void                    *buf;
 	unsigned                 size;
+
 	int                      sockfd;
-	struct ib_connection     local_connection;
-	struct ib_connection    *remote_connection;
+	struct ib_conn           local_conn;
+	struct ib_conn          *remote_conn;
 };
 
-struct user_config {
-	char     *servername;
-	int       sock_port;
-	int       ib_dev;
-	int       ib_port;
-	unsigned  size;
-	int       tx_depth;
-};
+static int parse_user_config(JNIEnv *, jobject, struct user_config *);
+static int init_rdma_context(struct rdma_context *, struct user_config *);
+static int connect_to_peer(struct rdma_context *, struct user_config *);
+static int rdma_write(struct rdma_context *);
+static int destroy(struct rdma_context *);
 
-static int init_user_config(JNIEnv *, jobject, struct user_config *);
-static int init_rdma_context(JNIEnv *, struct rdma_context *, struct user_config *);
-static int destroy(JNIEnv *, struct rdma_context *, struct user_config *);
+static int modify_qp_state_init(struct rdma_context *);
+static int modify_qp_state_rtr (struct rdma_context *);
+static int modify_qp_state_rts (struct rdma_context *);
 
-static int qp_change_state_init(JNIEnv *, struct ibv_qp *, struct user_config *);
-static int qp_change_state_rtr (JNIEnv *, struct rdma_context *, struct user_config *);
-static int qp_change_state_rts (JNIEnv *, struct rdma_context *, struct user_config *);
+static int set_local_ib_conn(struct rdma_context *);
+static int print_ib_conn(const char *, struct ib_conn *);
 
-static int set_local_ib_connection(JNIEnv *, struct rdma_context *, struct user_config *);
-static int print_ib_connection(char *, struct ib_connection *);
-
-static int rdma_write(JNIEnv *, struct rdma_context *);
 
 static int tcp_server_listen(struct user_config *);
 static int tcp_client_connect(struct user_config *);
-static int tcp_exch_ib_connection_info(struct rdma_context *);
+static int tcp_exch_ib_conn_info(struct rdma_context *);
 
-static int bpill(JNIEnv *, const char *);
+static int die(const char *);
 static void throwException(JNIEnv *, const char *cls_name, const char *msg);
 
 static const JNINativeMethod methods[] = {
-	{     "rdmaContextInit", "(Lac/ncic/syssw/azq/JniExamples/RdmaUserConfig;)Ljava/nio/ByteBuffer;", (void *)rdmaContextInit     },
-	{ "rdmaResourceRelease", "()V",                                                                   (void *)rdmaResourceRelease },
-	{           "rdmaWrite", "()V",                                                                   (void *)rdmaWrite           },
-	{            "rdmaRead", "()V",                                                                   (void *)rdmaRead            },
+	{ "rdmaSetUp", "(Lac/ncic/syssw/azq/JniExamples/RdmaUserConfig;)Ljava/nio/ByteBuffer;", (void *)rdmaSetUp },
+	{  "rdmaFree", "()V",                                                                   (void *)rdmaFree  },
+	{ "rdmaWrite", "()V",                                                                   (void *)rdmaWrite },
 };
 
 static struct rdma_context rctx = { 0 };
 static struct user_config  ucfg = { 0 };
+
+/* ------------------------------------------------------------------------- */
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved)
 {
@@ -114,8 +121,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved)
 		return JNI_ERR;
 	}
 
-//	IBV_NZ(env, ibv_fork_init(), "ibv_fork_init failed!");
-
 	return JNI_VERSION_1_6;
 }
 
@@ -123,84 +128,72 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *jvm, void *reserved)
 {
 }
 
-JNIEXPORT jobject JNICALL rdmaContextInit(JNIEnv *env, jobject this, jobject userConfig)
+JNIEXPORT jobject JNICALL rdmaSetUp(JNIEnv *env, jobject this, jobject userConfig)
 {
-	if (!userConfig) {
-		throwException(env, "Ljava/lang/IllegalArgumentException;", "rdmaContextInit: NULL param!");
+	srand48(getpid() * time(NULL));
+
+	if (parse_user_config(env, userConfig, &ucfg)) {
+		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "failed to parse user config!");
 		return NULL;
 	}
 
-	srand48(getpid() * time(NULL));
+	if (init_rdma_context(&rctx, &ucfg)) {
+		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "failed to set up RDMA context!");
+		return NULL;
+	}
 
-	CHK_NZN(init_user_config(env, userConfig, &ucfg));
+	if (connect_to_peer(&rctx, &ucfg)) {
+		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "failed to make IB connection!");
+		return NULL;
+	}
 
-	CHK_NZN(init_rdma_context(env, &rctx, &ucfg));
-
-	if (ucfg.servername) rctx.sockfd = tcp_client_connect(&ucfg);
-	else rctx.sockfd = tcp_server_listen(&ucfg);
-	tcp_exch_ib_connection_info(&rctx);
-	print_ib_connection("local  connection", &rctx.local_connection);
-	print_ib_connection("remote connection", rctx.remote_connection);
-
-	if (ucfg.servername) qp_change_state_rtr(env, &rctx, &ucfg);
-	else qp_change_state_rts(env, &rctx, &ucfg);
-
-	close(rctx.sockfd);
-
-	if (ucfg.servername)
-		return (*env)->NewDirectByteBuffer(env, rctx.buf + rctx.size, rctx.size);
-	else
-		return (*env)->NewDirectByteBuffer(env, rctx.buf, rctx.size);
-}
-
-JNIEXPORT void JNICALL rdmaResourceRelease(JNIEnv *env, jobject this)
-{
-	if (destroy(env, &rctx, &ucfg))
-//		exit(EXIT_FAILURE);
-		;
+	return (*env)->NewDirectByteBuffer(env, rctx.buf, rctx.size*2);
 }
 
 JNIEXPORT void JNICALL rdmaWrite(JNIEnv *env, jobject this)
 {
-	if (rdma_write(env, &rctx))
+	if (rdma_write(&rctx))
+		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "failed to perform RDMA write operation!");
+}
+
+JNIEXPORT void JNICALL rdmaFree(JNIEnv *env, jobject this)
+{
+	(*env)->ReleaseStringUTFChars(env, NULL, ucfg.server_name);
+	if (destroy(&rctx))
 //		exit(EXIT_FAILURE);
 		;
 }
 
-JNIEXPORT void JNICALL rdmaRead(JNIEnv *env, jobject this)
-{
-}
+/* ------------------------------------------------------------------------- */
 
-// ----------------------------------------------------------------------------
-
-static int init_user_config(JNIEnv *env, jobject userConfig, struct user_config *ucfg)
+static int parse_user_config(JNIEnv *env, jobject userConfig, struct user_config *ucfg)
 {
 	jclass userConfigCls;
 	jmethodID userConfigMethodId;
-	jstring serverName;
+
+	CHKP_ZI(userConfig, "user config is NULL!");
 
 	CHK_ZI(userConfigCls = (*env)->GetObjectClass(env, userConfig));
-
-	CHK_ZI(userConfigMethodId = (*env)->GetMethodID(env, userConfigCls, "getServerName", "()Ljava/lang/String;"));
-	serverName = (jstring)(*env)->CallObjectMethod(env, userConfig, userConfigMethodId);
-	if (serverName) {
-		ucfg->servername = (char *)(*env)->GetStringUTFChars(env, serverName, NULL);    // instance pinned, copy allocated: need be freed.
-			// here's buggy: if GetStringUTFChars returns NULL, the program would consider herself as the server.
-	}
-
-	CHK_ZI(userConfigMethodId = (*env)->GetMethodID(env, userConfigCls, "getSocketPort", "()I"));
-	ucfg->sock_port = (*env)->CallIntMethod(env, userConfig, userConfigMethodId);
 
 	ucfg->ib_dev  = 0;    // note: pick your properly working IB device
 	ucfg->ib_port = 1;    //       and port.
 
 	CHK_ZI(userConfigMethodId = (*env)->GetMethodID(env, userConfigCls, "getBufferSize", "()I"));
-	ucfg->size = (*env)->CallIntMethod(env, userConfig, userConfigMethodId);
+	ucfg->buffer_size = (*env)->CallIntMethod(env, userConfig, userConfigMethodId);
 
-	ucfg->tx_depth = 64;
+	CHK_ZI(userConfigMethodId = (*env)->GetMethodID(env, userConfigCls, "getSocketPort", "()I"));
+	ucfg->sock_port = (*env)->CallIntMethod(env, userConfig, userConfigMethodId);
+
+	CHK_ZI(userConfigMethodId = (*env)->GetMethodID(env, userConfigCls, "getServerName", "()Ljava/lang/String;"));
+	jstring serverName = (jstring)(*env)->CallObjectMethod(env, userConfig, userConfigMethodId);
+	if (serverName) {
+		ucfg->server_name = (char *)(*env)->GetStringUTFChars(env, serverName, NULL);
+			// instance pinned, copy allocated: need be freed.
+			// here's also buggy: if GetStringUTFChars returns NULL, the program would consider herself as the server.
+	}
+	(*env)->ReleaseStringUTFChars(env, serverName, NULL);    // not sure whether or not this would work.
 
 	(*env)->DeleteLocalRef(env, userConfigCls);
-	(*env)->ReleaseStringUTFChars(env, serverName, NULL);    // not sure whether or not this would work.
 
 	if ((*env)->ExceptionOccurred(env)) {
 		(*env)->ExceptionDescribe(env);
@@ -210,220 +203,131 @@ static int init_user_config(JNIEnv *env, jobject userConfig, struct user_config 
 	return 0;
 }
 
-static int init_rdma_context(JNIEnv *env, struct rdma_context *rctx, struct user_config *ucfg)
+static int init_rdma_context(struct rdma_context *rctx, struct user_config *ucfg)
 {
 	struct ibv_device **dev_list;
 	struct ibv_device_attr dev_attr;
 	struct ibv_port_attr port_attr;
+
 	struct ibv_qp_init_attr qp_init_attr = { 0 };
 	struct ibv_qp_attr qp_attr = { 0 };
 
 	int i, num_devices;
 
+//	CHKE_NZ(ibv_fork_init(), "ibv_fork_init failed!");
+
 	// check local IB devices.
-	IBV_ZI(env, dev_list = ibv_get_device_list(&num_devices), "ibv_get_device_list failed!");
+	CHKE_ZI(dev_list = ibv_get_device_list(&num_devices), "ibv_get_device_list failed!");
 	printf("found %d devices.\n", num_devices);
 	for (i = 0; i < num_devices; i++) {
 		printf("\t%d: %s 0x%" PRIx64 "\n", i, ibv_get_device_name(dev_list[i]), ibv_get_device_guid(dev_list[i]));
 	}
 
-	// open IB device and check port.
-	printf("using device %d.\n", ucfg->ib_dev);
+	// open IB device.
 	rctx->dev = dev_list[ucfg->ib_dev];
-	IBV_ZI(env, rctx->dev_ctx = ibv_open_device(rctx->dev), "ibv_open_device failed!");
-	IBV_NZI(env, ibv_query_device(rctx->dev_ctx, &dev_attr), "ibv_query_device failed!");
+	CHKE_ZI(rctx->dev_ctx = ibv_open_device(rctx->dev), "ibv_open_device failed!");
+	printf("using device %d.\n", ucfg->ib_dev);
+
+	// check device port.
+	CHKE_NZI(ibv_query_device(rctx->dev_ctx, &dev_attr), "ibv_query_device failed!");
 	printf("device has %d port(s).\n", dev_attr.phys_port_cnt);
-	printf("\tusing port %d.\n", ucfg->ib_port);
-	IBV_NZI(env, ibv_query_port(rctx->dev_ctx, ucfg->ib_port, &port_attr), "ibv_query_port failed!");
+
+	rctx->port_num = ucfg->ib_port;
+	CHKE_NZI(ibv_query_port(rctx->dev_ctx, rctx->port_num, &port_attr), "ibv_query_port failed!");
+	printf("\tusing port %d.\n", rctx->port_num);
+	printf("\tstatus: %s.\n", ibv_port_state_str(port_attr.state));
 	if (port_attr.state != IBV_PORT_ACTIVE) {
-		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "IB port down!");
+		fprintf(stderr, "IB port %d is not ready!\n", rctx->port_num);
 		return -1;
-	} else {
-		printf("\tport %d status: %s.\n", ucfg->ib_port, ibv_port_state_str(port_attr.state));
 	}
 
 	// allocate a protection domain.
-	IBV_ZI(env, rctx->pd = ibv_alloc_pd(rctx->dev_ctx), "ibv_alloc_pd failed!");
+	CHKE_ZI(rctx->pd = ibv_alloc_pd(rctx->dev_ctx), "ibv_alloc_pd failed!");
 
 	// allocate and prepare the RDMA buffer.
-	rctx->size = ucfg->size;
-	IBV_NZI(env,
-	        posix_memalign(&rctx->buf, sysconf(_SC_PAGESIZE), rctx->size*2),
-	        "could not allocate buffer.");
+	rctx->size = ucfg->buffer_size;
+	CHKE_NZI(posix_memalign(&rctx->buf, sysconf(_SC_PAGESIZE), rctx->size*2), "failed to allocate buffer.");
 	memset(rctx->buf, 0, rctx->size*2);
 
 	// register the buffer and assoicate with the allocated protection domain.
-	IBV_ZI(env,
-	       rctx->mr = ibv_reg_mr(rctx->pd, rctx->buf, rctx->size*2, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE),
-	       "ibv_reg_mr failed! do you have root access?");
+	CHKE_ZI(rctx->mr = ibv_reg_mr(rctx->pd, rctx->buf, rctx->size*2, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE),
+	        "ibv_reg_mr failed! do you have root access?");
 
 	// set up S/R completion queue and CQE notification receiving.
-	IBV_ZI(env, rctx->ch = ibv_create_comp_channel(rctx->dev_ctx), "ibv_create_comp_channel failed!");
-	IBV_ZI(env, rctx->rcq = ibv_create_cq(rctx->dev_ctx, 1, NULL, NULL, 0), "ibv_create_cq failed!");
-	IBV_ZI(env, rctx->scq = ibv_create_cq(rctx->dev_ctx, ucfg->tx_depth, rctx, rctx->ch, 0), "ibv_create_cq failed!");
+	CHKE_ZI(rctx->ch = ibv_create_comp_channel(rctx->dev_ctx), "ibv_create_comp_channel failed!");
+	CHKE_ZI(rctx->scq = ibv_create_cq(rctx->dev_ctx, 64, rctx, rctx->ch, 0), "ibv_create_cq (scq) failed!");
+	CHKE_ZI(rctx->rcq = ibv_create_cq(rctx->dev_ctx, 1, NULL, NULL, 0), "ibv_create_cq (rcq) failed!");
 
 	// create the queue pair.
 	qp_init_attr.send_cq = rctx->scq;
 	qp_init_attr.recv_cq = rctx->rcq;
 	qp_init_attr.qp_type = IBV_QPT_RC;
-	qp_init_attr.cap.max_send_wr     = ucfg->tx_depth;
+	qp_init_attr.cap.max_send_wr     = 64;
 	qp_init_attr.cap.max_recv_wr     = 1;
 	qp_init_attr.cap.max_send_sge    = 1;
 	qp_init_attr.cap.max_recv_sge    = 1;
 	qp_init_attr.cap.max_inline_data = 0;
-	IBV_ZI(env, rctx->qp = ibv_create_qp(rctx->pd, &qp_init_attr), "ibv_create_qp failed!");
+	CHKE_ZI(rctx->qp = ibv_create_qp(rctx->pd, &qp_init_attr), "ibv_create_qp failed!");
 
-	// initialize QP and set status to INIT.
+	// set QP status to INIT.
 	qp_attr.qp_state        = IBV_QPS_INIT;
 	qp_attr.pkey_index      = 0;
-	qp_attr.port_num        = ucfg->ib_port;
+	qp_attr.port_num        = rctx->port_num;
 	qp_attr.qp_access_flags = IBV_ACCESS_REMOTE_WRITE;
-	IBV_NZI(env,
-	        ibv_modify_qp(rctx->qp, &qp_attr,
-	                      IBV_QP_STATE      |
-	                      IBV_QP_PKEY_INDEX |
-	                      IBV_QP_PORT       |
-	                      IBV_QP_ACCESS_FLAGS),
-	        "ibv_modify_qp failed!");
+	CHKE_NZI(ibv_modify_qp(rctx->qp, &qp_attr,
+	                       IBV_QP_STATE      |
+	                       IBV_QP_PKEY_INDEX |
+	                       IBV_QP_PORT       |
+	                       IBV_QP_ACCESS_FLAGS),
+	         "ibv_modify_qp (INIT) failed!");
 
 	// record local IB info to exchange with peer.
-	rctx->local_connection.lid   = port_attr.lid;
-	rctx->local_connection.qpn   = rctx->qp->qp_num;
-	rctx->local_connection.psn   = lrand48() & 0xffffff;
-	rctx->local_connection.rkey  = rctx->mr->rkey;
-	rctx->local_connection.vaddr = (uintptr_t)rctx->buf + rctx->size;
+	rctx->local_conn.lid   = port_attr.lid;
+	rctx->local_conn.qpn   = rctx->qp->qp_num;
+	rctx->local_conn.psn   = lrand48() & 0xffffff;
+	rctx->local_conn.rkey  = rctx->mr->rkey;
+	rctx->local_conn.vaddr = (uintptr_t)rctx->buf + rctx->size;
 
 	return 0;
 }
 
-static int destroy(JNIEnv *env, struct rdma_context *rctx, struct user_config *ucfg)
+static int connect_to_peer(struct rdma_context *rctx, struct user_config *ucfg)
 {
-	if (ucfg->servername) (*env)->ReleaseStringUTFChars(env, NULL, ucfg->servername);
+	// make TCP connection.
+	if (!ucfg->server_name) {
+		CHKP_NI(rctx->sockfd = tcp_server_listen(ucfg), "server failed!");
+	} else {
+		CHKP_NI(rctx->sockfd = tcp_client_connect(ucfg), "client failed!");
+	}
 
-	if (rctx->qp) IBV_NZI(env, ibv_destroy_qp(rctx->qp), "ibv_destroy_qp failed!");
-	if (rctx->scq) IBV_NZI(env, ibv_destroy_cq(rctx->scq), "ibv_destroy_cq (scp) failed!");
-	if (rctx->rcq) IBV_NZI(env, ibv_destroy_cq(rctx->rcq), "ibv_destroy_cq (rcp) failed!");
-	if (rctx->ch) IBV_NZI(env, ibv_destroy_comp_channel(rctx->ch), "ibv_destroy_comp_channel failed!");
-	if (rctx->mr) IBV_NZI(env, ibv_dereg_mr(rctx->mr), "ibv_dereg_mr failed!");
-	if (rctx->pd) IBV_NZI(env, ibv_dealloc_pd(rctx->pd), "ibv_dealloc_pd failed!");
+	// exchange ib connection info.
+	CHKP_NZI(tcp_exch_ib_conn_info(rctx), "failed to exchange IB info!");
+	print_ib_conn("local  connection", &rctx->local_conn);
+	print_ib_conn("remote connection", rctx->remote_conn);
 
-	if (rctx->buf) free(rctx->buf);
+	if (!ucfg->server_name) {
+		modify_qp_state_rts(rctx);
+	} else {
+		modify_qp_state_rtr(rctx);
+	}
 
-//	printf("resource released.\n");
+	close(rctx->sockfd);
 
 	return 0;
 }
 
-static int qp_change_state_init(JNIEnv *env, struct ibv_qp *qp, struct user_config *ucfg)
-{
-/*	struct ibv_qp_attr qp_attr = { 0 };
-
-	qp_attr.qp_state        = IBV_QPS_INIT;
-	qp_attr.pkey_index      = 0;
-	qp_attr.port_num        = ucfg->ib_port;
-	qp_attr.qp_access_flags = IBV_ACCESS_REMOTE_WRITE;
-
-	IBV_NZI(env,
-	        ibv_modify_qp(qp, &qp_attr,
-	                      IBV_QP_STATE      |
-	                      IBV_QP_PKEY_INDEX |
-	                      IBV_QP_PORT       |
-	                      IBV_QP_ACCESS_FLAGS),
-	        "ibv_modify_qp failed!");
-
-	return 0;*/
-}
-
-static int qp_change_state_rtr(JNIEnv *env, struct rdma_context *rctx, struct user_config *ucfg)
-{
-	struct ibv_qp_attr qp_attr = { 0 };
-
-	qp_attr.qp_state              = IBV_QPS_RTR;
-	qp_attr.path_mtu              = IBV_MTU_2048;
-	qp_attr.dest_qp_num           = rctx->remote_connection->qpn;
-	qp_attr.rq_psn                = rctx->remote_connection->psn;
-	qp_attr.max_dest_rd_atomic    = 1;
-	qp_attr.min_rnr_timer         = 12;
-	qp_attr.ah_attr.is_global     = 0;
-	qp_attr.ah_attr.dlid          = rctx->remote_connection->lid;
-	qp_attr.ah_attr.sl            = 1;
-	qp_attr.ah_attr.src_path_bits = 0;
-	qp_attr.ah_attr.port_num      = ucfg->ib_port;
-
-	IBV_NZI(env,
-	        ibv_modify_qp(rctx->qp, &qp_attr,
-	                      IBV_QP_STATE              |
-	                      IBV_QP_AV                 |
-	                      IBV_QP_PATH_MTU           |
-	                      IBV_QP_DEST_QPN           |
-	                      IBV_QP_RQ_PSN             |
-	                      IBV_QP_MAX_DEST_RD_ATOMIC |
-	                      IBV_QP_MIN_RNR_TIMER),
-                "could not modify QP to RTR state!");
-
-	return 0;
-}
-
-static int qp_change_state_rts(JNIEnv *env, struct rdma_context *rctx, struct user_config *ucfg)
-{
-	struct ibv_qp_attr qp_attr = { 0 };
-
-	CHK_NI(qp_change_state_rtr(env, rctx, ucfg));
-
-	qp_attr.qp_state      = IBV_QPS_RTS;
-	qp_attr.timeout       = 14;
-	qp_attr.retry_cnt     = 7;
-	qp_attr.rnr_retry     = 7;
-	qp_attr.sq_psn        = rctx->local_connection.psn;
-	qp_attr.max_rd_atomic = 1;
-
-	IBV_NZI(env,
-	        ibv_modify_qp(rctx->qp, &qp_attr,
-	                      IBV_QP_STATE     |
-	                      IBV_QP_TIMEOUT   |
-	                      IBV_QP_RETRY_CNT |
-	                      IBV_QP_RNR_RETRY |
-	                      IBV_QP_SQ_PSN    |
-	                      IBV_QP_MAX_QP_RD_ATOMIC),
-	        "could not modify QP to RTS state!");
-
-	return 0;
-}
-
-static int set_local_ib_connection(JNIEnv *env, struct rdma_context *rctx, struct user_config *ucfg)
-{
-/*	struct ibv_port_attr attr;
-
-	IBV_NZI(env,
-	        ibv_query_port(rctx->dev_ctx, ucfg->ib_port, &attr),
-	        "ibv_query_port failed!");
-
-	rctx->local_connection.lid   = attr.lid;
-	rctx->local_connection.qpn   = rctx->qp->qp_num;
-	rctx->local_connection.psn   = lrand48() & 0xffffff;
-	rctx->local_connection.rkey  = rctx->mr->rkey;
-	rctx->local_connection.vaddr = (uintptr_t)rctx->buf + rctx->size;
-
-	return 0;*/
-}
-
-static int print_ib_connection(char *conn_name, struct ib_connection *conn)
-{
-	printf("%s: LID %#04x, QPN %#06x, PSN %#06x, RKey %#08x, VAddr %#016Lx\n",
-	       conn_name, conn->lid, conn->qpn, conn->psn, conn->rkey, conn->vaddr);
-	return 0;
-}
-
-static int rdma_write(JNIEnv *env, struct rdma_context *rctx)
+static int rdma_write(struct rdma_context *rctx)
 {
 	struct ibv_send_wr *bad_wr;
+	struct ibv_wc wc = { 0 };
+	int ne;
 
 	rctx->sge_list.addr   = (uintptr_t)rctx->buf;
    	rctx->sge_list.length = rctx->size;
    	rctx->sge_list.lkey   = rctx->mr->lkey;
 
-  	rctx->wr.wr.rdma.remote_addr = rctx->remote_connection->vaddr;
-	rctx->wr.wr.rdma.rkey        = rctx->remote_connection->rkey;
+  	rctx->wr.wr.rdma.remote_addr = rctx->remote_conn->vaddr;
+	rctx->wr.wr.rdma.rkey        = rctx->remote_conn->rkey;
 	rctx->wr.wr_id               = 3;
 	rctx->wr.sg_list             = &rctx->sge_list;
 	rctx->wr.num_sge             = 1;
@@ -431,34 +335,159 @@ static int rdma_write(JNIEnv *env, struct rdma_context *rctx)
 	rctx->wr.send_flags          = IBV_SEND_SIGNALED;
 	rctx->wr.next                = NULL;
 
-	IBV_NZI(env, ibv_post_send(rctx->qp, &rctx->wr, &bad_wr), "ibv_post_send failed, this is bad mkay!");
+	CHKE_NZI(ibv_post_send(rctx->qp, &rctx->wr, &bad_wr), "ibv_post_send failed! bad mkay!");
 
+	do ne = ibv_poll_cq(rctx->scq, 1, &wc); while (ne == 0);
+	CHKE_NI(ne, "ibv_poll_cq failed!");
+
+	if (wc.status != IBV_WC_SUCCESS) {
+		fprintf(stderr, "error completion! status: %d, WR id: %d.\n", wc.status, (int) wc.wr_id);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int destroy(struct rdma_context *rctx)
+{
+	if (rctx->qp)  CHKE_NZI(ibv_destroy_qp(rctx->qp), "ibv_destroy_qp failed!");
+	if (rctx->scq) CHKE_NZI(ibv_destroy_cq(rctx->scq), "ibv_destroy_cq (scp) failed!");
+	if (rctx->rcq) CHKE_NZI(ibv_destroy_cq(rctx->rcq), "ibv_destroy_cq (rcp) failed!");
+	if (rctx->ch)  CHKE_NZI(ibv_destroy_comp_channel(rctx->ch), "ibv_destroy_comp_channel failed!");
+	if (rctx->mr)  CHKE_NZI(ibv_dereg_mr(rctx->mr), "ibv_dereg_mr failed!");
+	if (rctx->pd)  CHKE_NZI(ibv_dealloc_pd(rctx->pd), "ibv_dealloc_pd failed!");
+
+	if (rctx->remote_conn) free(rctx->remote_conn);
+	if (rctx->buf) free(rctx->buf);
+
+	return 0;
+}
+
+static int modify_qp_state_init(struct rdma_context *rctx)
+{
+	struct ibv_qp_attr qp_attr = { 0 };
+
+	qp_attr.qp_state        = IBV_QPS_INIT;
+	qp_attr.pkey_index      = 0;
+	qp_attr.port_num        = rctx->port_num;
+	qp_attr.qp_access_flags = IBV_ACCESS_REMOTE_WRITE;
+
+	CHKE_NZI(ibv_modify_qp(rctx->qp, &qp_attr,
+	                       IBV_QP_STATE      |
+	                       IBV_QP_PKEY_INDEX |
+	                       IBV_QP_PORT       |
+	                       IBV_QP_ACCESS_FLAGS),
+                 "failed to modify QP to INIT state!");
+
+	return 0;
+}
+
+static int modify_qp_state_rtr(struct rdma_context *rctx)
+{
+	struct ibv_qp_attr qp_attr = { 0 };
+
+	qp_attr.qp_state              = IBV_QPS_RTR;
+	qp_attr.path_mtu              = IBV_MTU_2048;
+	qp_attr.dest_qp_num           = rctx->remote_conn->qpn;
+	qp_attr.rq_psn                = rctx->remote_conn->psn;
+	qp_attr.max_dest_rd_atomic    = 1;
+	qp_attr.min_rnr_timer         = 12;
+	qp_attr.ah_attr.is_global     = 0;
+	qp_attr.ah_attr.dlid          = rctx->remote_conn->lid;
+	qp_attr.ah_attr.sl            = 1;
+	qp_attr.ah_attr.src_path_bits = 0;
+	qp_attr.ah_attr.port_num      = rctx->port_num;
+
+	CHKE_NZI(ibv_modify_qp(rctx->qp, &qp_attr,
+	                       IBV_QP_STATE              |
+	                       IBV_QP_AV                 |
+	                       IBV_QP_PATH_MTU           |
+	                       IBV_QP_DEST_QPN           |
+	                       IBV_QP_RQ_PSN             |
+	                       IBV_QP_MAX_DEST_RD_ATOMIC |
+	                       IBV_QP_MIN_RNR_TIMER),
+                 "failed to modify QP to RTR state!");
+
+	return 0;
+}
+
+static int modify_qp_state_rts(struct rdma_context *rctx)
+{
+	struct ibv_qp_attr qp_attr = { 0 };
+
+	CHK_NI(modify_qp_state_rtr(rctx));
+
+	qp_attr.qp_state      = IBV_QPS_RTS;
+	qp_attr.timeout       = 14;
+	qp_attr.retry_cnt     = 7;
+	qp_attr.rnr_retry     = 7;
+	qp_attr.sq_psn        = rctx->local_conn.psn;
+	qp_attr.max_rd_atomic = 1;
+
+	CHKE_NZI(ibv_modify_qp(rctx->qp, &qp_attr,
+	                       IBV_QP_STATE     |
+	                       IBV_QP_TIMEOUT   |
+	                       IBV_QP_RETRY_CNT |
+	                       IBV_QP_RNR_RETRY |
+	                       IBV_QP_SQ_PSN    |
+	                       IBV_QP_MAX_QP_RD_ATOMIC),
+	         "failed to modify QP to RTS state!");
+
+	return 0;
+}
+
+static int set_local_ib_conn(struct rdma_context *rctx)
+{
+	struct ibv_port_attr attr;
+
+	CHKE_NZI(ibv_query_port(rctx->dev_ctx, rctx->port_num, &attr), "ibv_query_port failed!");
+
+	rctx->local_conn.lid   = attr.lid;
+	rctx->local_conn.qpn   = rctx->qp->qp_num;
+	rctx->local_conn.psn   = lrand48() & 0xffffff;
+	rctx->local_conn.rkey  = rctx->mr->rkey;
+	rctx->local_conn.vaddr = (uintptr_t)rctx->buf + rctx->size;
+
+	return 0;
+}
+
+static int print_ib_conn(const char *conn_name, struct ib_conn *conn)
+{
+	printf("%s: LID %#04x, QPN %#06x, PSN %#06x, RKey %#08x, VAddr %#016Lx\n",
+	       conn_name, conn->lid, conn->qpn, conn->psn, conn->rkey, conn->vaddr);
 	return 0;
 }
 
 static int tcp_server_listen(struct user_config *ucfg)
 {
 	char *port;
-	int n, connfd;
-	int sockfd = -1;
-	struct sockaddr_in sin;
-	struct addrinfo *res, *t;
+	int s, connfd, sockfd = -1;
+	struct addrinfo *res, *rp;
 	struct addrinfo hints = {
-		.ai_flags    = AI_PASSIVE,
 		.ai_family   = AF_UNSPEC,
-		.ai_socktype = SOCK_STREAM };
+		.ai_flags    = AI_PASSIVE,
+		.ai_socktype = SOCK_STREAM
+	};
 
 	CHK_NI(asprintf(&port, "%d", ucfg->sock_port));
-	CHK_NZI(n = getaddrinfo(NULL, port, &hints, &res));
-	sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &n, sizeof n);
-	bind(sockfd, res->ai_addr, res->ai_addrlen);
-	printf("server: waiting for client to connect ...\n");
-	listen(sockfd, 1);
-	connfd = accept(sockfd, NULL, 0), "server accept failed.";
+	CHKE_NZI(s = getaddrinfo(NULL, port, &hints, &res), "getaddrinfo failed!");
+	for (rp = res; rp != NULL; rp = rp->ai_next) {
+		sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+		if (sockfd == -1) continue;
+
+		setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &s, sizeof s);
+		if (bind(sockfd, rp->ai_addr, rp->ai_addrlen) == 0) break;
+
+		close(sockfd);
+	}
+	CHKE_NI(rp, "failed to create or bind socket!");
 
 	free(port);
 	freeaddrinfo(res);
+
+	printf("server: waiting for client to connect ...\n");
+	CHKE_NZI(listen(sockfd, 1), "listen failed!");
+	CHKE_NI(connfd = accept(sockfd, NULL, 0), "accept failed!");
 
 	return connfd;
 }
@@ -467,21 +496,25 @@ static int tcp_client_connect(struct user_config *ucfg)
 {
 	char *port;
 	int sockfd = -1;
-	struct sockaddr_in sin;
-	struct addrinfo *res, *t;
+	struct addrinfo *res, *rp;
 	struct addrinfo hints = {
 		.ai_family   = AF_UNSPEC,
 		.ai_socktype = SOCK_STREAM
 	};
 
 	CHK_NI(asprintf(&port, "%d", ucfg->sock_port));
-	CHK_NZI(getaddrinfo(ucfg->servername, port, &hints, &res));
+	CHKE_NZI(getaddrinfo(ucfg->server_name, port, &hints, &res), "getaddrinfo failed!");
 
 	printf("client: connecting to server ...\n");
-	for (t = res; t; t = t->ai_next) {
-		sockfd = socket(t->ai_family, t->ai_socktype, t->ai_protocol);
-		connect(sockfd, t->ai_addr, t->ai_addrlen);
+	for (rp = res; rp != NULL; rp = rp->ai_next) {
+		sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+		if (sockfd == -1) continue;
+
+		if (connect(sockfd, rp->ai_addr, rp->ai_addrlen) != -1) break;
+
+		close(sockfd);
 	}
+	CHKE_NI(rp, "failed to create socket or connect to server!");
 
 	free(port);
 	freeaddrinfo(res);
@@ -489,47 +522,51 @@ static int tcp_client_connect(struct user_config *ucfg)
 	return sockfd;
 }
 
-static int tcp_exch_ib_connection_info(struct rdma_context *rctx)
+static int tcp_exch_ib_conn_info(struct rdma_context *rctx)
 {
 	char msg[sizeof "0000:000000:000000:00000000:0000000000000000"];
+	struct ib_conn *local, *remote;
 	int parsed;
-	struct ib_connection *local = &rctx->local_connection;
 
+	// send local IB connection info.
+	local = &rctx->local_conn;
 	sprintf(msg, "%04x:%06x:%06x:%08x:%016Lx",
 	              local->lid, local->qpn, local->psn, local->rkey, local->vaddr);
-
 	if (write(rctx->sockfd, msg, sizeof msg) != sizeof msg) {
-		perror("failed to send connection_details to peer.");
-		return -1;
+		perror("failed to send IB connection details to peer!");
+		goto ERROR;
 	}
 
+	// receive and parse remote IB connection info.
 	if (read(rctx->sockfd, msg, sizeof msg) != sizeof msg) {
-		perror("failed to receive connection_details from peer.");
-		return -1;
+		perror("failed to receive connection details from peer!");
+		goto ERROR;
 	}
-
-	if (!rctx->remote_connection) free(rctx->remote_connection);
-
-	rctx->remote_connection = malloc(sizeof(struct ib_connection));
-
-	struct ib_connection *remote = rctx->remote_connection;
-
+	if (rctx->remote_conn) free(rctx->remote_conn);
+	rctx->remote_conn = malloc(sizeof(struct ib_conn));
+	remote = rctx->remote_conn;
 	parsed = sscanf(msg, "%x:%x:%x:%x:%Lx",
 	                      &remote->lid, &remote->qpn, &remote->psn, &remote->rkey, &remote->vaddr);
-
 	if (parsed != 5) {
 		fprintf(stderr, "failed to parse message from peer.");
-		free(rctx->remote_connection);
+		free(rctx->remote_conn);
+		goto ERROR;
 	}
 
+	close(rctx->sockfd);
 	return 0;
+
+ERROR:
+	close(rctx->sockfd);
+	return -1;
 }
 
-static int bpill(JNIEnv *env, const char *msg)
+/* ------------------------------------------------------------------------- */
+
+static int die(const char *reason)
 {
-	fprintf(stderr, "native error: %s - %s\n", strerror(errno), msg);
-//	exit(EXIT_FAILURE);
-	throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", msg);
+	fprintf(stderr, "error: %s - %s\n ", strerror(errno), reason);
+	exit(EXIT_FAILURE);
 	return -1;
 }
 

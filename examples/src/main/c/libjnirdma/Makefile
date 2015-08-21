@@ -2,10 +2,10 @@
 PROJECT  := libjnirdma
 
 CFILES   := jnirdma.c
-DEPFILES :=
+DEPFILES := jnirdma.h
 
-jni      := 1
 shared   := 1
+jni      := 1
 rdma     := 1
 
 include ../../../../inc/common.mk
