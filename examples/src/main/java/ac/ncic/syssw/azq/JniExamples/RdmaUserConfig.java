@@ -2,19 +2,19 @@ package ac.ncic.syssw.azq.JniExamples;
 
 public class RdmaUserConfig {
 	private int bufferSize;
-	private int socketPort;
 	private String serverName;
+	private int socketPort;
 
 	public RdmaUserConfig() {
 		this.bufferSize = 65536;
-		this.socketPort = 9999;
 		this.serverName = null;
+		this.socketPort = 9999;
 	}
 
-	public RdmaUserConfig(int bufferSize, int socketPort, String serverName) {
+	public RdmaUserConfig(int bufferSize, String serverName, int socketPort) {
 		this.bufferSize = bufferSize;
-		this.socketPort = socketPort;
 		this.serverName = serverName;
+		this.socketPort = socketPort;
 	}
 
 	public void setBufferSize(int bufferSize) {
@@ -25,19 +25,19 @@ public class RdmaUserConfig {
 		return this.bufferSize;
 	}
 
-	public void setSocketPort(int socketPort) {
-		this.socketPort = socketPort;
-	}
-
-	public int getSocketPort() {
-		return this.socketPort;
-	}
-
 	public void setServerName(String serverName) {
 		this.serverName = serverName;
 	}
 
 	public String getServerName() {
 		return this.serverName;
+	}
+
+	public void setSocketPort(int socketPort) {
+		this.socketPort = socketPort;
+	}
+
+	public int getSocketPort() {
+		return this.socketPort;
 	}
 }

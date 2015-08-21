@@ -7,9 +7,38 @@ public final class JniRdma {
 		System.loadLibrary("jnirdma");
 	}
 
-	public static native ByteBuffer rdmaContextInit(RdmaUserConfig userConfig) throws RdmaException;
-	public static native void rdmaResourceRelease();
+	/**
+	 * Get IB ready to send/receive and return a RDMA memory registered
+	 * DirectByteBuffer.
+	 *
+	 * <p>
+	 * This native method first parses user configuration, then initializes
+	 * IB context (PD, MR, CQ, QP, etc.) and exchanges RDMA connection
+	 * information using native sockets.
+	 *
+	 * <p>
+	 * After this native method is done, IB is ready to performance RDMA
+	 * operations and a DirectByteBuffer is returned.
+	 *
+	 * <p>
+	 * This is still early demo, and is just for peer-to-peer test. For a
+	 * buffer of size <code>bufferSize</code>, a native buffer of size
+	 * <code>bufferSize*2</code> is actually allocated, with the first half
+	 * for write and second half for read.
+	 *
+	 * @param userConfig user configuration data.
+	 *
+	 * @return an MR DirectByteBuffer.
+	 */
+	public static native ByteBuffer rdmaSetUp(RdmaUserConfig userConfig) throws RdmaException;
 
-	public static native void rdmaWrite();
-	public static native void rdmaRead ();
+	/**
+	 * Perform RDMA write operation.
+	 */
+	public static native void rdmaWrite() throws RdmaException;
+
+	/**
+	 * Free/destroy RDMA resources.
+	 */
+	public static native void rdmaFree();
 }
