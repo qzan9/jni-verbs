@@ -1,13 +1,31 @@
 # JNI Verbs #
 
-Verbs API for Java; take advantage of high-performance IB/RDMA through JNI.
+Verbs API for Java: take advantage of high-performance IB/RDMA through JNI.
 
 InfiniBand refers to two distinctly different things:
 
-* a physical link-layer protocol for InfiniBand networks.
+* a physical link-layer protocol for InfiniBand networks, and
 
 * a higher level programming API called the InfiniBand Verbs API, which is an
   implementation of RDMA technology.
+
+# How to make Java RDMA-enabled? #
+
+* full JVM integration of `libibverbs`/`librdmacm`.
+
+* use JNI to attach to `libibverbs`/`librdmacm`.
+
+  - "struct-to-class, function-to-method" one-to-one mapping and wrapping:
+    expose whole RDMA concepts to Java.
+
+  - customize and simplify Java/JNI RDMA APIs for specific requirements and
+    scenarios: easy to use and hide a lot native low-level details but less
+    flexible.
+
+* re-write user space OFED mid layer using purely Java.
+
+  implement OFED I/O protocol and talk directly to `/dev/ib_verbs`: open the
+  device file and communicate with kernel via RDMA ABI totally in Java.
 
 # Environment Setup #
 
@@ -99,7 +117,7 @@ to verify local RDMA device and query device attributes, use `ibv_devices` and
 Oracle/Sun HotSpot JVM 1.7 is recommended.
 
 to configure Java environemnt, download the JDK tarball (from Oracle) and
-extract (to your home directory or some other global locations) and set-up
+extract (to your home directory or some other locations) and set-up
 (`$JAVA_HOME`, `PATH`, etc.), or simply (under Ubuntu 14.04)
 
 ```
@@ -111,22 +129,6 @@ extract (to your home directory or some other global locations) and set-up
 
 note that `JNI_VERSION_1_6` is required.
 
-Maven is recommended to compile the codes and build the jar. Eclipse and Idea
+you can use Maven to compile the codes and build the jar; Eclipse and Idea
 would also be able to do the job.
-
-# How to make Java RDMA-enabled? #
-
-* full JVM integration of `libibverbs`/`librdmacm`.
-
-* use JNI to attach to `libibverbs`/`librdmacm`.
-
-  - "struct-to-class, function-to-method" wrapping and encapsulation.
-
-  - specify Java/JNI RDMA APIs for specific requirements and scenarios: easy to
-    use and hide a lot native low-level details but less flexible.
-
-* re-write user space OFED mid layer purely using Java.
-
-  implement OFED I/O protocol and talk directly to `/dev/ib_verbs`: open the
-  device file and communicate with kernel via RDMA ABI totally in Java..
 
