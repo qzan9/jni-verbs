@@ -1,6 +1,6 @@
 # JNI Verbs #
 
-a JNI wrapper of native IB verbs API.
+Verbs API for Java; take advantage of high-performance IB/RDMA through JNI.
 
 InfiniBand refers to two distinctly different things:
 
@@ -55,7 +55,7 @@ the "must-install" user-space packages are userspace driver (for Mellanox, it's
 also need the RDMA communication management API (`librdmacm`).
 
 to verify local RDMA device and query device attributes, use `ibv_devices` and
-`ibv_devinfo` (both contained in package `libibverbs-utils`)
+`ibv_devinfo` (both contained in package `libibverbs-utils`), e.g.,
 
 ```
     # ibv_devices
@@ -113,4 +113,20 @@ note that `JNI_VERSION_1_6` is required.
 
 Maven is recommended to compile the codes and build the jar. Eclipse and Idea
 would also be able to do the job.
+
+# How to make Java RDMA-enabled? #
+
+* full JVM integration of `libibverbs`/`librdmacm`.
+
+* use JNI to attach to `libibverbs`/`librdmacm`.
+
+  - "struct-to-class, function-to-method" wrapping and encapsulation.
+
+  - specify Java/JNI RDMA APIs for specific requirements and scenarios: easy to
+    use and hide a lot native low-level details but less flexible.
+
+* re-write user space OFED mid layer purely using Java.
+
+  implement OFED I/O protocol and talk directly to `/dev/ib_verbs`: open the
+  device file and communicate with kernel via RDMA ABI totally in Java..
 
