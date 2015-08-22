@@ -72,6 +72,10 @@ the "must-install" user-space packages are userspace driver (for Mellanox, it's
 `libmlx4` or `libmlx5` or `libmthca`) and verbs library (`libibverbs`). you may
 also need the RDMA communication management API (`librdmacm`).
 
+other installation options include downloading OFED package tarball from
+[openfabrics.org][1] or using vendor-specific OFED distribution (such as
+MLNX-OFED).
+
 to verify local RDMA device and query device attributes, use `ibv_devices` and
 `ibv_devinfo` (both contained in package `libibverbs-utils`), e.g.,
 
@@ -131,4 +135,6 @@ note that `JNI_VERSION_1_6` is required.
 
 you can use Maven to compile the codes and build the jar; Eclipse and Idea
 would also be able to do the job.
+
+[1]: https://www.openfabrics.org
 
