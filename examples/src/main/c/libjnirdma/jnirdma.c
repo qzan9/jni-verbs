@@ -97,8 +97,8 @@ static const JNINativeMethod methods[] = {
 	{ "rdmaWrite", "()V",                                                                   (void *)rdmaWrite },
 };
 
-static struct rdma_context rctx = { 0 };
-static struct user_config  ucfg = { 0 };
+static struct rdma_context rctx;
+static struct user_config  ucfg;
 
 /* ------------------------------------------------------------------------- */
 
@@ -123,13 +123,16 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved)
 	return JNI_VERSION_1_6;
 }
 
-JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *jvm, void *reserved)
-{
-}
+//JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *jvm, void *reserved)
+//{
+//}
 
 JNIEXPORT jobject JNICALL rdmaSetUp(JNIEnv *env, jobject this, jobject userConfig)
 {
 	srand48(getpid() * time(NULL));
+
+	memset(&rctx, 0, sizeof rctx);
+	memset(&ucfg, 0, sizeof ucfg);
 
 	if (parse_user_config(env, userConfig, &ucfg)) {
 		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "failed to parse user config!");
@@ -210,9 +213,6 @@ static int init_rdma_context(struct rdma_context *rctx, struct user_config *ucfg
 	struct ibv_device_attr dev_attr;
 	struct ibv_port_attr port_attr;
 
-	struct ibv_qp_init_attr qp_init_attr = { 0 };
-	struct ibv_qp_attr qp_attr = { 0 };
-
 	int i, num_devices;
 
 //	CHKE_NZ(ibv_fork_init(), "ibv_fork_init failed!");
@@ -260,21 +260,27 @@ static int init_rdma_context(struct rdma_context *rctx, struct user_config *ucfg
 	CHKE_ZI(rctx->rcq = ibv_create_cq(rctx->dev_ctx, 1, NULL, NULL, 0), "ibv_create_cq (rcq) failed!");
 
 	// create the queue pair.
-	qp_init_attr.send_cq = rctx->scq;
-	qp_init_attr.recv_cq = rctx->rcq;
-	qp_init_attr.qp_type = IBV_QPT_RC;
-	qp_init_attr.cap.max_send_wr     = 64;
-	qp_init_attr.cap.max_recv_wr     = 1;
-	qp_init_attr.cap.max_send_sge    = 1;
-	qp_init_attr.cap.max_recv_sge    = 1;
-	qp_init_attr.cap.max_inline_data = 0;
+	struct ibv_qp_init_attr qp_init_attr = {
+		.send_cq = rctx->scq,
+		.recv_cq = rctx->rcq,
+		.qp_type = IBV_QPT_RC,
+		.cap = {
+			.max_send_wr     = 64,
+			.max_recv_wr     = 1,
+			.max_send_sge    = 1,
+			.max_recv_sge    = 1,
+			.max_inline_data = 0
+		}
+	};
 	CHKE_ZI(rctx->qp = ibv_create_qp(rctx->pd, &qp_init_attr), "ibv_create_qp failed!");
 
 	// set QP status to INIT.
-	qp_attr.qp_state        = IBV_QPS_INIT;
-	qp_attr.pkey_index      = 0;
-	qp_attr.port_num        = rctx->port_num;
-	qp_attr.qp_access_flags = IBV_ACCESS_REMOTE_WRITE;
+	struct ibv_qp_attr qp_attr = {
+		.qp_state        = IBV_QPS_INIT,
+		.pkey_index      = 0,
+		.port_num        = rctx->port_num,
+		.qp_access_flags = IBV_ACCESS_REMOTE_WRITE
+	};
 	CHKE_NZI(ibv_modify_qp(rctx->qp, &qp_attr,
 	                       IBV_QP_STATE      |
 	                       IBV_QP_PKEY_INDEX |
@@ -320,7 +326,7 @@ static int connect_to_peer(struct rdma_context *rctx, struct user_config *ucfg)
 static int rdma_write(struct rdma_context *rctx)
 {
 	struct ibv_send_wr *bad_wr;
-	struct ibv_wc wc = { 0 };
+	struct ibv_wc wc;
 	int ne;
 
 	rctx->sge_list.addr   = (uintptr_t)rctx->buf;
@@ -366,12 +372,12 @@ static int destroy(struct rdma_context *rctx)
 
 static int modify_qp_state_init(struct rdma_context *rctx)
 {
-	struct ibv_qp_attr qp_attr = { 0 };
-
-	qp_attr.qp_state        = IBV_QPS_INIT;
-	qp_attr.pkey_index      = 0;
-	qp_attr.port_num        = rctx->port_num;
-	qp_attr.qp_access_flags = IBV_ACCESS_REMOTE_WRITE;
+	struct ibv_qp_attr qp_attr = {
+		.qp_state        = IBV_QPS_INIT,
+		.pkey_index      = 0,
+		.port_num        = rctx->port_num,
+		.qp_access_flags = IBV_ACCESS_REMOTE_WRITE
+	};
 
 	CHKE_NZI(ibv_modify_qp(rctx->qp, &qp_attr,
 	                       IBV_QP_STATE      |
@@ -385,19 +391,21 @@ static int modify_qp_state_init(struct rdma_context *rctx)
 
 static int modify_qp_state_rtr(struct rdma_context *rctx)
 {
-	struct ibv_qp_attr qp_attr = { 0 };
-
-	qp_attr.qp_state              = IBV_QPS_RTR;
-	qp_attr.path_mtu              = IBV_MTU_2048;
-	qp_attr.dest_qp_num           = rctx->remote_conn->qpn;
-	qp_attr.rq_psn                = rctx->remote_conn->psn;
-	qp_attr.max_dest_rd_atomic    = 1;
-	qp_attr.min_rnr_timer         = 12;
-	qp_attr.ah_attr.is_global     = 0;
-	qp_attr.ah_attr.dlid          = rctx->remote_conn->lid;
-	qp_attr.ah_attr.sl            = 1;
-	qp_attr.ah_attr.src_path_bits = 0;
-	qp_attr.ah_attr.port_num      = rctx->port_num;
+	struct ibv_qp_attr qp_attr = {
+		.qp_state              = IBV_QPS_RTR,
+		.path_mtu              = IBV_MTU_2048,
+		.dest_qp_num           = rctx->remote_conn->qpn,
+		.rq_psn                = rctx->remote_conn->psn,
+		.max_dest_rd_atomic    = 1,
+		.min_rnr_timer         = 12,
+		.ah_attr = {
+			.is_global     = 0,
+			.dlid          = rctx->remote_conn->lid,
+			.sl            = 1,
+			.src_path_bits = 0,
+			.port_num      = rctx->port_num
+		}
+	};
 
 	CHKE_NZI(ibv_modify_qp(rctx->qp, &qp_attr,
 	                       IBV_QP_STATE              |
@@ -414,16 +422,16 @@ static int modify_qp_state_rtr(struct rdma_context *rctx)
 
 static int modify_qp_state_rts(struct rdma_context *rctx)
 {
-	struct ibv_qp_attr qp_attr = { 0 };
-
 	CHK_NI(modify_qp_state_rtr(rctx));
 
-	qp_attr.qp_state      = IBV_QPS_RTS;
-	qp_attr.timeout       = 14;
-	qp_attr.retry_cnt     = 7;
-	qp_attr.rnr_retry     = 7;
-	qp_attr.sq_psn        = rctx->local_conn.psn;
-	qp_attr.max_rd_atomic = 1;
+	struct ibv_qp_attr qp_attr = {
+		.qp_state      = IBV_QPS_RTS,
+		.timeout       = 14,
+		.retry_cnt     = 7,
+		.rnr_retry     = 7,
+		.sq_psn        = rctx->local_conn.psn,
+		.max_rd_atomic = 1
+	};
 
 	CHKE_NZI(ibv_modify_qp(rctx->qp, &qp_attr,
 	                       IBV_QP_STATE     |

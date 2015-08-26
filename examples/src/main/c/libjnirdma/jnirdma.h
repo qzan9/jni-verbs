@@ -13,7 +13,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 JNIEXPORT jint JNICALL JNI_Onload  (JavaVM *, void *);
-JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *, void *);
+//JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *, void *);
 
 JNIEXPORT jobject JNICALL rdmaSetUp(JNIEnv *, jobject, jobject);
 JNIEXPORT void    JNICALL rdmaWrite(JNIEnv *, jobject);
