@@ -49,6 +49,13 @@ test/
 .idea
 *.iml
 
+# Visual Studio files
+.vs
+*.opensdf
+*.sdf
+*.suo
+*.vcxproj.user
+
 # misc.
 *.log
 *.bak
