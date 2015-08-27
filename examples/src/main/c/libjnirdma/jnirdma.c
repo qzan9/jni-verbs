@@ -330,10 +330,10 @@ static int rdma_write(struct rdma_context *rctx)
 	int ne;
 
 	rctx->sge_list.addr   = (uintptr_t)rctx->buf;
-   	rctx->sge_list.length = rctx->size;
-   	rctx->sge_list.lkey   = rctx->mr->lkey;
+	rctx->sge_list.length = rctx->size;
+	rctx->sge_list.lkey   = rctx->mr->lkey;
 
-  	rctx->wr.wr.rdma.remote_addr = rctx->remote_conn->vaddr;
+	rctx->wr.wr.rdma.remote_addr = rctx->remote_conn->vaddr;
 	rctx->wr.wr.rdma.rkey        = rctx->remote_conn->rkey;
 	rctx->wr.wr_id               = 3;
 	rctx->wr.sg_list             = &rctx->sge_list;
