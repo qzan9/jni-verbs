@@ -5,7 +5,6 @@
 
 #ifdef __GNUC__
 #	define _POSIX_C_SOURCE 200809L
-#	define _SVID_SOURCE
 #	define _GNU_SOURCE
 #endif /* __GNUC__ */
 
@@ -26,8 +25,6 @@
 static int modify_qp_state_init(struct rdma_context *);
 static int modify_qp_state_rtr (struct rdma_context *);
 static int modify_qp_state_rts (struct rdma_context *);
-
-static int print_ib_conn(const char *, struct ib_conn *);
 
 static int tcp_server_listen(int);
 static int tcp_client_connect(const char *, int);
@@ -55,15 +52,18 @@ int init_context(struct rdma_context *rctx, struct user_config *ucfg)
 	CHK_ZEI(rctx->dev_ctx = ibv_open_device(rctx->dev), "ibv_open_device failed!");
 	printf("using device %d.\n", ucfg->ib_dev);
 
-	// query device.
+	// query device port(s).
 	CHK_NZEI(ibv_query_device(rctx->dev_ctx, &dev_attr), "ibv_query_device failed!");
-	printf("device has %d port(s).\n", dev_attr.phys_port_cnt);
+	printf("device %d has %d port(s).\n", ucfg->ib_dev, dev_attr.phys_port_cnt);
+	for (i = 1; i <= dev_attr.phys_port_cnt; i++) {
+		CHK_NZEI(ibv_query_port(rctx->dev_ctx, i, &port_attr), "ibv_query_port failed!");
+		printf("\t%d: %s 0x%" PRIx16 "\n", i, ibv_port_state_str(port_attr.state), port_attr.lid);
+	}
 
 	// check device port.
 	rctx->port_num = ucfg->ib_port;
+	printf("using port %d.\n", rctx->port_num);
 	CHK_NZEI(ibv_query_port(rctx->dev_ctx, rctx->port_num, &port_attr), "ibv_query_port failed!");
-	printf("\tusing port %d.\n", rctx->port_num);
-	printf("\tstatus: %s.\n", ibv_port_state_str(port_attr.state));
 	if (port_attr.state != IBV_PORT_ACTIVE) {
 		fprintf(stderr, "IB port %d is not ready!\n", rctx->port_num);
 		return -1;
@@ -273,13 +273,6 @@ static int modify_qp_state_rts(struct rdma_context *rctx)
 	                       IBV_QP_MAX_QP_RD_ATOMIC),
 	         "ibv_modify_qp (set RTS) failed!");
 
-	return 0;
-}
-
-static int print_ib_conn(const char *conn_name, struct ib_conn *conn)
-{
-	printf("%s: LID %#04x, QPN %#06x, PSN %#06x, RKey %#08x, VAddr %#016Lx\n",
-	       conn_name, conn->lid, conn->qpn, conn->psn, conn->rkey, conn->vaddr);
 	return 0;
 }
 

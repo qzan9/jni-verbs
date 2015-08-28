@@ -3,9 +3,15 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  */
 
+#ifdef __GNUC__
+#	define _SVID_SOURCE
+#endif /* __GNUC__ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <unistd.h>
 
 #include <jni.h>
 
