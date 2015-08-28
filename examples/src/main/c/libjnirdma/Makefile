@@ -1,8 +1,8 @@
 # project files
 PROJECT  := libjnirdma
 
-CFILES   := jnirdma.c
-DEPFILES := jnirdma.h
+CFILES   := jnirdma.c ibv_rdma.c
+DEPFILES := chk_err.h
 
 shared   := 1
 jni      := 1

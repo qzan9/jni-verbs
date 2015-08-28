@@ -57,5 +57,6 @@ test/
 *.vcxproj.user
 
 # misc.
+infiniband/
 *.log
 *.bak

@@ -18,9 +18,18 @@
     <ClCompile Include="jnirdma.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ibv_rdma.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="jnirdma.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ibv_rdma.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="chk_err.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
