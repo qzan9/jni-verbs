@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2015, AZQ. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2015  AZQ
  */
 
 package ac.ncic.syssw.azq.JniExamples;
@@ -13,7 +12,7 @@ public class Main {
 	public static void main(String[] args) {
 		try {
 			RdmaUserConfig userConfig = new RdmaUserConfig(65536, (args.length == 0) ? null : args[0], 9999);
-			ByteBuffer buffer = rdmaSetUp(userConfig);
+			ByteBuffer buffer = rdmaInit(userConfig);
 			if (userConfig.getServerName() == null) {    // server
 				String data = "it's been a long day without you my friend, and i'll tell you all about it when i see you again ...";
 				System.out.println("data (String): " + data);

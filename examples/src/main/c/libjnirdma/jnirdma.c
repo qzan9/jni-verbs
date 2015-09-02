@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2015, AZQ. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2015  AZQ
  */
 
 #ifdef __GNUC__
@@ -23,9 +22,9 @@ static int parse_user_config(JNIEnv *, jobject, struct user_config *);
 static void throwException(JNIEnv *, const char *, const char *);
 
 static const JNINativeMethod methods[] = {
-	{ "rdmaSetUp", "(Lac/ncic/syssw/azq/JniExamples/RdmaUserConfig;)Ljava/nio/ByteBuffer;", (void *)rdmaSetUp },
-	{  "rdmaFree", "()V",                                                                   (void *)rdmaFree  },
+	{  "rdmaInit", "(Lac/ncic/syssw/azq/JniExamples/RdmaUserConfig;)Ljava/nio/ByteBuffer;", (void *)rdmaInit  },
 	{ "rdmaWrite", "()V",                                                                   (void *)rdmaWrite },
+	{  "rdmaFree", "()V",                                                                   (void *)rdmaFree  },
 };
 
 static struct rdma_context *rctx;
@@ -56,7 +55,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved)
 //{
 //}
 
-JNIEXPORT jobject JNICALL rdmaSetUp(JNIEnv *env, jobject this, jobject userConfig)
+JNIEXPORT jobject JNICALL rdmaInit(JNIEnv *env, jobject this, jobject userConfig)
 {
 	if (!(rctx = malloc(sizeof *rctx))) {
 		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "failed to allocate rdma context!");
