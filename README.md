@@ -16,11 +16,11 @@ InfiniBand refers to two distinctly different things:
 * use JNI to attach to `libibverbs`/`librdmacm`.
 
   - "struct-to-class, function-to-method" one-to-one mapping and wrapping:
-    expose whole RDMA concepts to Java.
+  expose whole RDMA concepts to Java.
 
   - customize and simplify Java/JNI RDMA APIs for specific requirements and
-    scenarios: easy to use and hide a lot native low-level details but less
-    flexible.
+  scenarios: easy to use and hide a lot native low-level details but less
+  flexible.
 
 * re-write user space OFED mid layer using purely Java.
 
