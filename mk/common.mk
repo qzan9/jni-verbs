@@ -1,6 +1,6 @@
 # global directory layout
 ROOT         := ../../../..
-BIN          := $(ROOT)/../bin
+BIN          := $(ROOT)/bin
 INC          := $(ROOT)/inc
 LIB          := $(ROOT)/lib
 SRC          := $(ROOT)/src/main/c
@@ -8,7 +8,7 @@ SRC          := $(ROOT)/src/main/c
 # project directories and files
 PROJECTDIR   := .
 OBJDIR       := $(PROJECTDIR)/obj
-OUTPUTDIR    := $(BIN)/examples
+OUTPUTDIR    := $(BIN)
 
 OBJFILES     := $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(CFILES))) \
                 $(patsubst %.cpp,$(OBJDIR)/%.o,$(notdir $(CCFILES)))

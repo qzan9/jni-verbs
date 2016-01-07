@@ -19,7 +19,7 @@
                         <manifestFile>src/main/resources/META-INF/MANIFEST.MF</manifestFile>
                     </archive>
                     <outputDirectory>
-                        ../bin/examples
+                        bin
                     </outputDirectory>
                 </configuration>
             </plugin>

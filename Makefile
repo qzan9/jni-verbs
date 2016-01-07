@@ -11,7 +11,6 @@ clean: $(addsuffix .ph_clean,$(SOLUTION))
 
 .PHONY: clobber
 clobber: $(addsuffix .ph_clobber,$(SOLUTION))
-	rm -fr ../bin/examples
 
 %.ph_build:
 	+@$(MAKE) -C $(dir $*) $(MAKECMDGOALS)

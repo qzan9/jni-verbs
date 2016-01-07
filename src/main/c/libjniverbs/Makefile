@@ -8,4 +8,4 @@ jni      := 1
 shared   := 1
 rdma     := 1
 
-include ../../../../inc/common.mk
+include ../../../../mk/common.mk
