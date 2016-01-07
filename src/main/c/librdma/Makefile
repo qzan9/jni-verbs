@@ -1,11 +1,10 @@
 # project files
-PROJECT  := libjnirdma
+PROJECT  := librdma
 
-CFILES   := jnirdma.c
+CFILES   := rdma.c
 DEPFILES :=
 
 shared   := 1
-jni      := 1
 rdma     := 1
 
 include ../../../../mk/common.mk

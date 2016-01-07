@@ -14,9 +14,10 @@
 
 #include <jni.h>
 
+#include <ibv_rdma.h>
+#include <chk_err.h>
+
 #include "jnirdma.h"
-#include "ibv_rdma.h"
-#include "chk_err.h"
 
 static int parse_user_config(JNIEnv *, jobject, struct user_config *);
 static void throwException(JNIEnv *, const char *, const char *);
