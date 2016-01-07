@@ -42,6 +42,9 @@ LIBRARIES    := -L$(LIB) -L$(OUTPUTDIR)
 ifeq ($(rdma),1)
    LIBRARIES += -libverbs
 endif
+ifeq ($(rdma_me),1)
+   LIBRARIES += -lrdma
+endif
 
 CC           := gcc
 CFLAGS       := -fPIC -std=c99 $(ARCH) $(DEBUG) $(INCLUDES)
