@@ -3,7 +3,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  */
 
-package ac.ncic.syssw.azq.JniExamples;
+package ac.ncic.syssw.jni;
 
 /**
  * A simple mutable integer type.

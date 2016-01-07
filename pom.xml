@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>ac.ncic.syssw.azq</groupId>
-    <artifactId>jni-examples</artifactId>
+    <artifactId>jni-verbs</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 
     <build>

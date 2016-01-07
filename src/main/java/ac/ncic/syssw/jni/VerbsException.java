@@ -3,7 +3,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  */
 
-package ac.ncic.syssw.azq.JniExamples;
+package ac.ncic.syssw.jni;
 
 public class VerbsException extends Exception {
 	public VerbsException() {

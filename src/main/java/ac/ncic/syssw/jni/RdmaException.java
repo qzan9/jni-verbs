@@ -1,4 +1,4 @@
-package ac.ncic.syssw.azq.JniExamples;
+package ac.ncic.syssw.jni;
 
 public class RdmaException extends Exception {
 	public RdmaException() {
