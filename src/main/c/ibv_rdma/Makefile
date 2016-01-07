@@ -4,6 +4,6 @@ PROJECT  := ibv_rdma
 CFILES   := ibv_rdma.c
 DEPFILES :=
 
-rdma     := 1
+ibv      := 1
 
 include ../../../../mk/common.mk

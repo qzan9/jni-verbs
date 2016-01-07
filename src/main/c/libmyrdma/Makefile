@@ -1,10 +1,10 @@
 # project files
-PROJECT  := librdma
+PROJECT  := libmyrdma
 
-CFILES   := rdma.c
+CFILES   := my_rdma.c
 DEPFILES :=
 
 shared   := 1
-rdma     := 1
+ibv      := 1
 
 include ../../../../mk/common.mk

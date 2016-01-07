@@ -39,11 +39,11 @@ ifeq ($(jni),1)
 endif
 
 LIBRARIES    := -L$(LIB) -L$(OUTPUTDIR)
-ifeq ($(rdma),1)
+ifeq ($(ibv),1)
    LIBRARIES += -libverbs
 endif
-ifeq ($(rdma_me),1)
-   LIBRARIES += -lrdma
+ifeq ($(rdma),1)
+   LIBRARIES += -lmyrdma
 endif
 
 CC           := gcc

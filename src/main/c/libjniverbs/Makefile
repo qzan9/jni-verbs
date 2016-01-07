@@ -6,6 +6,6 @@ DEPFILES := jniverbs.h jniverbs_excp.h
 
 jni      := 1
 shared   := 1
-rdma     := 1
+ibv      := 1
 
 include ../../../../mk/common.mk

@@ -14,7 +14,7 @@
 
 #include <jni.h>
 
-#include <ibv_rdma.h>
+#include <my_rdma.h>
 #include <chk_err.h>
 
 #include "jnirdma.h"

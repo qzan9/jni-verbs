@@ -3,8 +3,8 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  */
 
-#ifndef _IBV_RDMA_H_
-#define _IBV_RDMA_H_
+#ifndef _MY_RDMA_H_
+#define _MY_RDMA_H_
 
 #include <infiniband/verbs.h>
 
@@ -61,5 +61,5 @@ int destroy_context(struct rdma_context *);
 }
 #endif /*__cplusplus */
 
-#endif /* _IBV_RDMA_H_ */
+#endif /* _MY_RDMA_H_ */
 
