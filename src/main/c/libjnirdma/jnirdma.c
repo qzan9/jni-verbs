@@ -23,9 +23,11 @@ static int parse_user_config(JNIEnv *, jobject, struct user_config *);
 static void throwException(JNIEnv *, const char *, const char *);
 
 static const JNINativeMethod methods[] = {
-	{  "rdmaInit", "(Lac/ncic/syssw/azq/JniExamples/RdmaUserConfig;)Ljava/nio/ByteBuffer;", (void *)rdmaInit  },
-	{ "rdmaWrite", "()V",                                                                   (void *)rdmaWrite },
-	{  "rdmaFree", "()V",                                                                   (void *)rdmaFree  },
+	{  "rdmaInit",      "(Lac/ncic/syssw/jni/RdmaUserConfig;)Ljava/nio/ByteBuffer;", (void *)rdmaInit       },
+	{ "rdmaWrite",      "()V",                                                       (void *)rdmaWrite      },
+	{ "rdmaWriteAsync", "(II)V",                                                     (void *)rdmaWriteAsync },
+	{ "rdmaPollCq",     "(I)V",                                                      (void *)rdmaWriteAsync },
+	{  "rdmaFree",      "()V",                                                       (void *)rdmaFree       },
 };
 
 static struct rdma_context *rctx;
@@ -40,9 +42,9 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved)
 		return JNI_ERR;
 	}
 
-//	if (env->RegisterNatives(env->FindClass("Lac/ncic/syssw/azq/JniExamples/JniRdma;"),
+//	if (env->RegisterNatives(env->FindClass("Lac/ncic/syssw/jni/JniRdma;"),
 	if ((*env)->RegisterNatives(env,
-	                            (*env)->FindClass(env, "Lac/ncic/syssw/azq/JniExamples/JniRdma;"),
+	                            (*env)->FindClass(env, "Lac/ncic/syssw/jni/JniRdma;"),
 	                            methods,
 	                            sizeof(methods) / sizeof(methods[0])
 	                           ) < -1) {
@@ -56,14 +58,14 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved)
 //{
 //}
 
-JNIEXPORT jobject JNICALL rdmaInit(JNIEnv *env, jobject this, jobject userConfig)
+JNIEXPORT jobject JNICALL rdmaInit(JNIEnv *env, jobject thisObj, jobject userConfig)
 {
 	if (!(rctx = malloc(sizeof *rctx))) {
-		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "failed to allocate rdma context!");
+		throwException(env, "Lac/ncic/syssw/jni/RdmaException;", "failed to allocate rdma context!");
 		return NULL;
 	}
 	if (!(ucfg = malloc(sizeof *ucfg))) {
-		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "failed to allocate user config!");
+		throwException(env, "Lac/ncic/syssw/jni/RdmaException;", "failed to allocate user config!");
 		return NULL;
 	}
 	memset(rctx, 0, sizeof *rctx);
@@ -72,31 +74,45 @@ JNIEXPORT jobject JNICALL rdmaInit(JNIEnv *env, jobject this, jobject userConfig
 	srand48(getpid() * time(NULL));
 
 	if (parse_user_config(env, userConfig, ucfg)) {
-		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "failed to parse user config!");
+		throwException(env, "Lac/ncic/syssw/jni/RdmaException;", "failed to parse user config!");
 		return NULL;
 	}
 
 	if (init_context(rctx, ucfg)) {
-		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "failed to set up RDMA context!");
+		throwException(env, "Lac/ncic/syssw/jni/RdmaException;", "failed to set up RDMA context!");
 		return NULL;
 	}
 
 	if (connect_to_peer(rctx, ucfg)) {
-		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "failed to make IB connection!");
+		throwException(env, "Lac/ncic/syssw/jni/RdmaException;", "failed to make IB connection!");
 		return NULL;
 	}
 
 	return (*env)->NewDirectByteBuffer(env, rctx->buf, rctx->size*2);
 }
 
-JNIEXPORT void JNICALL rdmaWrite(JNIEnv *env, jobject this)
+JNIEXPORT void JNICALL rdmaWrite(JNIEnv *env, jobject thisObj)
 {
 	if (rdma_write(rctx))
-		throwException(env, "Lac/ncic/syssw/azq/JniExamples/RdmaException;", "failed to perform RDMA write operation!");
+		throwException(env, "Lac/ncic/syssw/jni/RdmaException;", "failed to perform RDMA write operation!");
 	return;
 }
 
-JNIEXPORT void JNICALL rdmaFree(JNIEnv *env, jobject this)
+JNIEXPORT void JNICALL rdmaWriteAsync(JNIEnv *env, jobject thisObj, jint offset, jint length)
+{
+	if (rdma_write(rctx), offset, length)
+		throwException(env, "Lac/ncic/syssw/jni/RdmaException;", "failed to perform asynchronous RDMA write operation!");
+	return;
+}
+
+JNIEXPORT void JNICALL rdmaPollCq(JNIEnv *env, jobject thisObj, jint num_entries)
+{
+	if (rdma_poll_cq(rctx, num_entries))
+		throwException(env, "Lac/ncic/syssw/jni/RdmaException;", "failed to poll CQ entries!");
+	return;
+}
+
+JNIEXPORT void JNICALL rdmaFree(JNIEnv *env, jobject thisObj)
 {
 	if (ucfg->server_name)
 		(*env)->ReleaseStringUTFChars(env, NULL, ucfg->server_name);

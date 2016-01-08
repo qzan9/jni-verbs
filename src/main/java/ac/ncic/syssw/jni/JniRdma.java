@@ -42,6 +42,16 @@ public final class JniRdma {
 	public static native void rdmaWrite() throws RdmaException;
 
 	/**
+	 * Perform asynchronous RDMA write operation.
+	 */
+	public static native void rdmaWriteAsync(int offset, int length) throws RdmaException;
+
+	/**
+	 * Poll CQ entries.
+	 */
+	public static native void rdmaPollCq(int numEntries) throws RdmaException;
+
+	/**
 	 * Free/destroy RDMA resources.
 	 */
 	public static native void rdmaFree();

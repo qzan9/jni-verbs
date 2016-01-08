@@ -16,6 +16,8 @@ JNIEXPORT jint JNICALL JNI_Onload  (JavaVM *, void *);
 
 JNIEXPORT jobject JNICALL rdmaInit (JNIEnv *, jobject, jobject);
 JNIEXPORT void    JNICALL rdmaWrite(JNIEnv *, jobject);
+JNIEXPORT void    JNICALL rdmaWriteAsync(JNIEnv *, jobject, jint, jint);
+JNIEXPORT void    JNICALL rdmaPollCq    (JNIEnv *, jobject, jint);
 JNIEXPORT void    JNICALL rdmaFree (JNIEnv *, jobject);
 
 #ifdef __cplusplus

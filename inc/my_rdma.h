@@ -55,6 +55,9 @@ int connect_to_peer(struct rdma_context *, struct user_config *);
 
 int rdma_write(struct rdma_context *);
 
+int rdma_write_async(struct rdma_context *, int offset, int length);
+int rdma_poll_cq(struct rdma_context *, int num_entries);
+
 int destroy_context(struct rdma_context *);
 
 #ifdef __cplusplus

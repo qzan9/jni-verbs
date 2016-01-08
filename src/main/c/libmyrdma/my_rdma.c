@@ -184,6 +184,44 @@ int rdma_write(struct rdma_context *rctx)
 	return 0;
 }
 
+int rdma_write_async(struct rdma_context *rctx, int offset, int length)
+{
+	struct ibv_send_wr *bad_wr;
+
+	rctx->sge_list.addr   = (uintptr_t)(rctx->buf+offset);
+	rctx->sge_list.length = length;
+	rctx->sge_list.lkey   = rctx->mr->lkey;
+
+	rctx->wr.wr.rdma.remote_addr = rctx->remote_conn->vaddr + offset;
+	rctx->wr.wr.rdma.rkey        = rctx->remote_conn->rkey;
+	rctx->wr.wr_id               = 3;
+	rctx->wr.sg_list             = &rctx->sge_list;
+	rctx->wr.num_sge             = 1;
+	rctx->wr.opcode              = IBV_WR_RDMA_WRITE;
+	rctx->wr.send_flags          = IBV_SEND_SIGNALED;
+	rctx->wr.next                = NULL;
+
+	CHK_NZEI(ibv_post_send(rctx->qp, &rctx->wr, &bad_wr), "ibv_post_send failed! bad mkay!");
+
+	return 0;
+}
+
+int rdma_poll_cq(struct rdma_context *rctx, int num_entries)
+{
+	struct ibv_wc wc;
+	int ne;
+
+	do ne = ibv_poll_cq(rctx->scq, num_entries, &wc); while (ne == 0);
+	CHK_NEI(ne, "ibv_poll_cq failed!");
+
+	if (wc.status != IBV_WC_SUCCESS) {
+		fprintf(stderr, "error completion! status: %d, WR id: %d.\n", wc.status, (int) wc.wr_id);
+		return -1;
+	}
+
+	return 0;
+}
+
 int destroy_context(struct rdma_context *rctx)
 {
 	if (rctx->qp)  CHK_NZEI(ibv_destroy_qp(rctx->qp), "ibv_destroy_qp failed!");
