@@ -44,6 +44,10 @@ int main(int argc, char **argv)
 	CHK_NZPI(init_context(rctx, ucfg), "failed to initialize my RDMA context!");
 	CHK_NZPI(connect_to_peer(rctx, ucfg), "failed to connect to peer server!");
 
+	char *ch_ptr = (char*)rctx->local_conn->vaddr;
+	while(1) if (strlen(ch_ptr) > 0) break;
+	printf("local buffer: %s\n", ch_ptr);
+
 	destroy_context(rctx);
 	free(rctx);
 	free(ucfg);
