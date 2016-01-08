@@ -74,11 +74,14 @@ int init_context(struct rdma_context *rctx, struct user_config *ucfg)
 
 	// allocate and prepare the RDMA buffer.
 	rctx->size = ucfg->buffer_size;
-	CHK_NZEI(posix_memalign(&rctx->buf, sysconf(_SC_PAGESIZE), rctx->size*2), "failed to allocate buffer.");
-	memset(rctx->buf, 0, rctx->size*2);
+	//CHK_NZEI(posix_memalign(&rctx->buf, sysconf(_SC_PAGESIZE), rctx->size*2), "failed to allocate buffer.");
+	CHK_NZEI(posix_memalign(&rctx->buf, sysconf(_SC_PAGESIZE), rctx->size), "failed to allocate buffer.");
+	//memset(rctx->buf, 0, rctx->size*2);
+	memset(rctx->buf, 0, rctx->size);
 
 	// register the buffer and associate with the allocated protection domain.
-	CHK_ZEI(rctx->mr = ibv_reg_mr(rctx->pd, rctx->buf, rctx->size*2, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE),
+	//CHK_ZEI(rctx->mr = ibv_reg_mr(rctx->pd, rctx->buf, rctx->size*2, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE),
+	CHK_ZEI(rctx->mr = ibv_reg_mr(rctx->pd, rctx->buf, rctx->size, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE),
 	        "ibv_reg_mr failed! do you have root access?");
 
 	// set up S/R completion queue and CQE notification receiving.
@@ -126,7 +129,8 @@ int init_context(struct rdma_context *rctx, struct user_config *ucfg)
 	rctx->local_conn->qpn   = rctx->qp->qp_num;
 	rctx->local_conn->psn   = lrand48() & 0xffffff;
 	rctx->local_conn->rkey  = rctx->mr->rkey;
-	rctx->local_conn->vaddr = (uintptr_t)rctx->buf + rctx->size;
+	//rctx->local_conn->vaddr = (uintptr_t)rctx->buf + rctx->size;
+	rctx->local_conn->vaddr = (uintptr_t)rctx->buf;
 
 	return 0;
 }
