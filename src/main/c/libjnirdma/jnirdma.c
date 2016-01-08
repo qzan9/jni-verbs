@@ -100,7 +100,7 @@ JNIEXPORT void JNICALL rdmaWrite(JNIEnv *env, jobject thisObj)
 
 JNIEXPORT void JNICALL rdmaWriteAsync(JNIEnv *env, jobject thisObj, jint offset, jint length)
 {
-	if (rdma_write(rctx), offset, length)
+	if (rdma_write_async(rctx, offset, length))
 		throwException(env, "Lac/ncic/syssw/jni/RdmaException;", "failed to perform asynchronous RDMA write operation!");
 	return;
 }
