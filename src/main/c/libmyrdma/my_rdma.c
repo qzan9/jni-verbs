@@ -1,11 +1,24 @@
 /*
- * Copyright (c) 2015, AZQ. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * RDMA constructs and "a-bit-higher" level functionalities.
+ *
+ * Author(s):
+ *   azq  @qzan9  anzhongqi@ncic.ac.cn
  */
 
 #ifdef __GNUC__
+
+#ifndef _POSIX_C_SOURCE
 #	define _POSIX_C_SOURCE 200809L
+#endif /* _POSIX_C_SOURCE */
+
+#ifndef _GNU_SOURCE
 #	define _GNU_SOURCE
+#endif /* _GNU_SOURCE */
+
+#ifndef _SVID_SOURCE
+#	define _SVID_SOURCE
+#endif /* _SVID_SOURCE */
+
 #endif /* __GNUC__ */
 
 #include <stdio.h>
@@ -19,8 +32,8 @@
 
 #include <infiniband/verbs.h>
 
-#include "my_rdma.h"
-#include "chk_err.h"
+#include <my_rdma.h>
+#include <chk_err.h>
 
 static int modify_qp_state_init(struct rdma_context *);
 static int modify_qp_state_rtr (struct rdma_context *);
@@ -37,6 +50,8 @@ int init_context(struct rdma_context *rctx, struct user_config *ucfg)
 	struct ibv_port_attr port_attr;
 
 	int i, num_devices;
+
+	srand48(getpid()*time(NULL));
 
 //	CHKE_NZ(ibv_fork_init(), "ibv_fork_init failed!");
 
@@ -72,20 +87,15 @@ int init_context(struct rdma_context *rctx, struct user_config *ucfg)
 	// allocate protection domain.
 	CHK_ZEI(rctx->pd = ibv_alloc_pd(rctx->dev_ctx), "ibv_alloc_pd failed!");
 
-	// allocate and prepare the RDMA buffer.
+	// allocate and register the RDMA buffer.
 	rctx->size = ucfg->buffer_size;
-	//CHK_NZEI(posix_memalign(&rctx->buf, sysconf(_SC_PAGESIZE), rctx->size*2), "failed to allocate buffer.");
 	CHK_NZEI(posix_memalign(&rctx->buf, sysconf(_SC_PAGESIZE), rctx->size), "failed to allocate buffer.");
-	//memset(rctx->buf, 0, rctx->size*2);
 	memset(rctx->buf, 0, rctx->size);
-
-	// register the buffer and associate with the allocated protection domain.
-	//CHK_ZEI(rctx->mr = ibv_reg_mr(rctx->pd, rctx->buf, rctx->size*2, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE),
 	CHK_ZEI(rctx->mr = ibv_reg_mr(rctx->pd, rctx->buf, rctx->size, IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE),
 	        "ibv_reg_mr failed! do you have root access?");
 
 	// set up S/R completion queue and CQE notification receiving.
-	CHK_ZEI(rctx->ch = ibv_create_comp_channel(rctx->dev_ctx), "ibv_create_comp_channel failed!");
+	CHK_ZEI(rctx->ch  = ibv_create_comp_channel(rctx->dev_ctx), "ibv_create_comp_channel failed!");
 	CHK_ZEI(rctx->scq = ibv_create_cq(rctx->dev_ctx, 64, rctx, rctx->ch, 0), "ibv_create_cq (scq) failed!");
 	CHK_ZEI(rctx->rcq = ibv_create_cq(rctx->dev_ctx, 1, NULL, NULL, 0), "ibv_create_cq (rcq) failed!");
 
@@ -119,7 +129,7 @@ int init_context(struct rdma_context *rctx, struct user_config *ucfg)
 	         "ibv_modify_qp (INIT) failed!");
 
 	// allocate space for IB info.
-	CHK_ZPI(rctx->local_conn  = malloc(sizeof(struct ib_conn)), "failed to allocate local_conn!");
+	CHK_ZPI(rctx->local_conn  = malloc(sizeof(struct ib_conn)), "failed to allocate local_conn!" );
 	CHK_ZPI(rctx->remote_conn = malloc(sizeof(struct ib_conn)), "failed to allocate remote_conn!");
 	memset(rctx->local_conn , 0, sizeof(struct ib_conn));
 	memset(rctx->remote_conn, 0, sizeof(struct ib_conn));
@@ -129,7 +139,6 @@ int init_context(struct rdma_context *rctx, struct user_config *ucfg)
 	rctx->local_conn->qpn   = rctx->qp->qp_num;
 	rctx->local_conn->psn   = lrand48() & 0xffffff;
 	rctx->local_conn->rkey  = rctx->mr->rkey;
-	//rctx->local_conn->vaddr = (uintptr_t)rctx->buf + rctx->size;
 	rctx->local_conn->vaddr = (uintptr_t)rctx->buf;
 
 	return 0;
@@ -147,6 +156,7 @@ int connect_to_peer(struct rdma_context *rctx, struct user_config *ucfg)
 	// exchange IB connection info.
 	CHK_NZPI(tcp_exch_ib_conn_info(rctx->sockfd, rctx->local_conn, rctx->remote_conn), "failed to exchange IB info!");
 
+	// prepare the QPs: server -> RTS, client -> RTR.
 	if (!ucfg->server_name) {
 		modify_qp_state_rts(rctx);
 	} else {

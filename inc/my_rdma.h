@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2015, AZQ. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * RDMA constructs and "a-bit-higher" level functionalities.
+ *
+ * Author: azq/@qzan9
  */
 
 #ifndef _MY_RDMA_H_
@@ -55,8 +56,8 @@ int connect_to_peer(struct rdma_context *, struct user_config *);
 
 int rdma_write(struct rdma_context *);
 
-int rdma_write_async(struct rdma_context *, int offset, int length);
-int rdma_poll_cq(struct rdma_context *, int num_entries);
+int rdma_write_async(struct rdma_context *, int, int);
+int rdma_poll_cq(struct rdma_context *, int);
 
 int destroy_context(struct rdma_context *);
 
