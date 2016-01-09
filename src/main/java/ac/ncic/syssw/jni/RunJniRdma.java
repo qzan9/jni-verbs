@@ -31,7 +31,7 @@ public class RunJniRdma {
 				System.out.println("data (String): " + data);
 				buffer.putInt(data.length());
 				buffer.put(data.getBytes());
-//				System.out.println("server writing to remote client buffer through RDMA ...");
+				System.out.println("server writing to remote client buffer through RDMA ...");
 				JniRdma.rdmaWrite();
 			} else {    // client
 				System.out.println("client reading local buffer ...");
@@ -54,35 +54,51 @@ public class RunJniRdma {
 
 	public void simplePipeTest() {
 		try {
-			RdmaUserConfig userConfig = new RdmaUserConfig(512, null, 9999);
-			ByteBuffer buffer = JniRdma.rdmaInit(userConfig);
+			Random random = new Random();
+			long elapsedTimeSum;
 
 			System.out.println("=== RDMA write benchmarking ===");
 
-			System.out.println("warming up ...");
-			Random random = new Random();
-			byte[] data = new byte[512];
-			for (int i = 0; i < 100; i++) {
-				random.nextBytes(data);
-			}
+			RdmaUserConfig userConfig = new RdmaUserConfig(524288, null, 9999);
+			ByteBuffer buffer = JniRdma.rdmaInit(userConfig);
 
-			long elapsedTimeSum = 0;
+			System.out.println("start messuring DirectByteBuffer.put() ...");
+
+			byte[] data = new byte[userConfig.getBufferSize()];
+			elapsedTimeSum = 0;
 			for (int t = 0; t < 1000; t++) {
 				random.nextBytes(data);
 
 				long startTime = System.nanoTime();
 				buffer.put(data);
 				elapsedTimeSum += System.nanoTime() - startTime;
-			}
-			System.out.printf("average time of putting %d KB data into DirectByteBuffer is %d us us.\n", 512, elapsedTimeSum/1000000);
 
-//			JniRdma.rdmaWrite();
-			JniRdma.rdmaWriteAsync(0, data.length);
-			JniRdma.rdmaPollCq(1);
+				buffer.position(0);
+			}
+
+			System.out.printf("average time of putting %d bytes data into DirectByteBuffer is %d ns.\n", data.length, elapsedTimeSum/1000);
+
+			System.out.println("start messuring rdmaWrite() ...");
+
+			elapsedTimeSum = 0;
+			for (int t = 0; t < 1000; t++) {
+				random.nextBytes(data);
+				buffer.put(data);
+
+				long startTime = System.nanoTime();
+				JniRdma.rdmaWrite();
+//				JniRdma.rdmaWriteAsync(0, data.length);
+//				JniRdma.rdmaPollCq(1);
+				elapsedTimeSum += System.nanoTime() - startTime;
+
+				buffer.position(0);
+			}
+
+			System.out.printf("average time of RDMA writing %d bytes is %d ns.\n", data.length, elapsedTimeSum/1000);
 		} catch (RdmaException e) {
 			System.out.println("RDMA error! check your native IB/OFED/TCP configuration!");
 		} catch (Exception e) {
-
+			e.printStackTrace();
 		} finally {
 			JniRdma.rdmaFree();
 		}
