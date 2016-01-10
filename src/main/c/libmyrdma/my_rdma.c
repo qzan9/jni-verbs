@@ -202,7 +202,9 @@ int rdma_write_async(struct rdma_context *rctx, int offset, int length)
 {
 	struct ibv_send_wr *bad_wr;
 
-	rctx->sge_list.addr   = (uintptr_t)(rctx->buf+offset);
+//	printf("rdma_write_async: %d\n", *(int *)rctx->buf);
+
+	rctx->sge_list.addr   = (uintptr_t)(rctx->buf + offset);
 	rctx->sge_list.length = length;
 	rctx->sge_list.lkey   = rctx->mr->lkey;
 
