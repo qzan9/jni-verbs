@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2015  AZQ
+ * gluing JVM and my_rdma library.
+ *
+ * Author(s):
+ *   azq  @qzan9  anzhongqi@ncic.ac.cn
  */
 
 #ifdef __GNUC__
@@ -88,7 +91,7 @@ JNIEXPORT jobject JNICALL rdmaInit(JNIEnv *env, jobject thisObj, jobject userCon
 		return NULL;
 	}
 
-	return (*env)->NewDirectByteBuffer(env, rctx->buf, rctx->size*2);
+	return (*env)->NewDirectByteBuffer(env, rctx->buf, rctx->size);
 }
 
 JNIEXPORT void JNICALL rdmaWrite(JNIEnv *env, jobject thisObj)
