@@ -41,7 +41,8 @@ static struct user_config  *ucfg;
 
 int main(int argc, char **argv)
 {
-	int op, n;
+	int m, n;
+	int op;
 
 	rctx = malloc(sizeof *rctx);
 	ucfg = malloc(sizeof *ucfg);
@@ -79,8 +80,17 @@ int main(int argc, char **argv)
 	CHK_NZPI(init_context(rctx, ucfg), "failed to initialize my RDMA context!");
 	CHK_NZPI(connect_to_peer(rctx, ucfg), "failed to connect to peer server!");
 
+	m = *(int *)rctx->buf;
 	while(1) {
-		if ((n = *((int *)(rctx->buf))) == INT_MAX) break;
+		memcpy((void *)&n, rctx->buf, sizeof n);
+		if (m != n) {
+			m = n;
+			printf("%d ", m);
+			if (m == INT_MAX) {
+				printf("\n");
+				break;
+			}
+		}
 	}
 
 	destroy_context(rctx);
