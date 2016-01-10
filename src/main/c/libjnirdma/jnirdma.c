@@ -74,8 +74,6 @@ JNIEXPORT jobject JNICALL rdmaInit(JNIEnv *env, jobject thisObj, jobject userCon
 	memset(rctx, 0, sizeof *rctx);
 	memset(ucfg, 0, sizeof *ucfg);
 
-	srand48(getpid() * time(NULL));
-
 	if (parse_user_config(env, userConfig, ucfg)) {
 		throwException(env, "Lac/ncic/syssw/jni/RdmaException;", "failed to parse user config!");
 		return NULL;
