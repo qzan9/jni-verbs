@@ -15,9 +15,10 @@ import java.util.Random;
 import sun.nio.ch.DirectBuffer;
 
 public class RunJniRdma {
+
 	public static final int BUFFER_SIZE = 524288;
-	public static final int WARMUP_ITER = 1000;
-	public static final int BMK_ITER    = 1000;
+	public static final int WARMUP_ITER = 15000;
+	public static final int BMK_ITER    = 10000;
 
 	private RunJniRdma() { }
 
@@ -81,7 +82,6 @@ public class RunJniRdma {
 
 	public void pipeBenchmarkJniRdma() {
 		try {
-
 			Random random = new Random();
 			long elapsedTimeSum;
 			long bufferAddress;
@@ -101,13 +101,16 @@ public class RunJniRdma {
 
 			System.out.println("\nwarming up ...");
 			data = new byte[buffer.limit()];
+			buffer.order(ByteOrder.nativeOrder());
 			bufferAddress = ((DirectBuffer) buffer).address();
 			for (int t = 0; t < WARMUP_ITER; t++) {
 				random.nextBytes(data);
 				buffer.put(data);
+				long startTime = System.nanoTime();
 				buffer.clear();
 				random.nextBytes(data);
-				U2Unsafe.copyByteArray(data, 0, null, bufferAddress, data.length);
+				U2Unsafe.copyByteArrayToDirectBuffer(data, bufferAddress, data.length);
+				JniRdma.rdmaWrite();
 				buffer.clear();
 			}
 			System.out.println("done!");
@@ -123,7 +126,7 @@ public class RunJniRdma {
 
 				buffer.clear();
 			}
-			System.out.printf("average time of putting %d bytes data into DirectByteBuffer is %.1f ns.\n", data.length, (double) elapsedTimeSum/BMK_ITER);
+			System.out.printf("average time of putting %d bytes data into DirectByteBuffer is %.1f ns.\n", data.length, (double)elapsedTimeSum/BMK_ITER);
 
 			System.out.println("\nstart measuring Unsafe.copyMemory() ...");
 			elapsedTimeSum = 0;
@@ -131,18 +134,19 @@ public class RunJniRdma {
 				random.nextBytes(data);
 
 				long startTime  = System.nanoTime();
-				U2Unsafe.copyByteArray(data, 0, null, bufferAddress, data.length);
+				U2Unsafe.copyByteArrayToDirectBuffer(data, bufferAddress, data.length);
 				elapsedTimeSum += System.nanoTime() - startTime;
 
 				buffer.clear();
 			}
-			System.out.printf("average time of putting %d bytes data into DirectByteBuffer is %.1f ns.\n", data.length, (double) elapsedTimeSum/BMK_ITER);
+			System.out.printf("average time of copying %d bytes data into DirectByteBuffer is %.1f ns.\n", data.length, (double)elapsedTimeSum/BMK_ITER);
 
 			System.out.println("\nstart measuring rdmaWrite() ...");
 			elapsedTimeSum = 0;
 			for (int t = 0; t < BMK_ITER; t++) {
 				random.nextBytes(data);
-				buffer.put(data);
+//				buffer.put(data);
+				U2Unsafe.copyByteArrayToDirectBuffer(data, bufferAddress, data.length);
 
 				long startTime  = System.nanoTime();
 				JniRdma.rdmaWrite();
@@ -150,10 +154,10 @@ public class RunJniRdma {
 
 				buffer.clear();
 			}
-			System.out.printf("average time of RDMA writing %d bytes is %.1f ns.\n", data.length, (double) elapsedTimeSum/BMK_ITER);
+			System.out.printf("average time of RDMA writing %d bytes is %.1f ns.\n", data.length, (double)elapsedTimeSum/BMK_ITER);
 
 			System.out.println("\ntell client to shutdown ...");
-			buffer.order(ByteOrder.LITTLE_ENDIAN);
+			buffer.order(ByteOrder.nativeOrder());
 			buffer.putInt(Integer.MAX_VALUE);
 			JniRdma.rdmaWriteAsync(0, buffer.position());
 			JniRdma.rdmaPollCq(1);
@@ -168,4 +172,3 @@ public class RunJniRdma {
 		}
 	}
 }
-

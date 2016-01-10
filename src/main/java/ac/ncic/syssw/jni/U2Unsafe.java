@@ -46,6 +46,10 @@ public final class U2Unsafe {
 		_UNSAFE.copyMemory(src, BYTE_ARRAY_OFFSET + srcOffset, dest, BYTE_ARRAY_OFFSET + destOffset, length);
 	}
 
+	public static void copyByteArrayToDirectBuffer(byte[] src, long bufferAddress, long length) {
+		_UNSAFE.copyMemory(src, BYTE_ARRAY_OFFSET, null, bufferAddress, length);
+	}
+
 	public static void throwException(Throwable t) {
 		_UNSAFE.throwException(t);
 	}
