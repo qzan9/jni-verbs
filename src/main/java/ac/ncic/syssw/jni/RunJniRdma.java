@@ -8,6 +8,7 @@
 package ac.ncic.syssw.jni;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Random;
 
 public class RunJniRdma {
@@ -57,21 +58,19 @@ public class RunJniRdma {
 			Random random = new Random();
 			long elapsedTimeSum;
 
-			System.out.println("====== RDMA write benchmarking ======");
-			System.out.println();
+			System.out.println("\n====== RDMA write benchmarking ======");
 
-			System.out.println("initializing RDMA ...");
+			System.out.println("\ninitializing RDMA ...");
 			RdmaUserConfig userConfig = new RdmaUserConfig(524288, null, 9999);
 			ByteBuffer buffer = JniRdma.rdmaInit(userConfig);
-			System.out.println("RDMA buffer info:");
+			System.out.println("\nRDMA buffer info:");
 			System.out.println("- capacity: "    + buffer.capacity()  );
 			System.out.println("- limit: "       + buffer.limit()     );
 			System.out.println("- isDirect: "    + buffer.isDirect()  );
 			System.out.println("- order: "       + buffer.order()     );
 			System.out.println("- isReadOnly: "  + buffer.isReadOnly());
-			System.out.println();
 
-			System.out.println("warming up ...");
+			System.out.println("\nwarming up ...");
 			byte[] data = new byte[buffer.limit()];
 			for (int t = 0; t < 1000; t++) {
 				random.nextBytes(data);
@@ -79,11 +78,10 @@ public class RunJniRdma {
 				buffer.clear();
 			}
 			System.out.println("done!");
-			System.out.println();
 
-			System.out.println("start measuring ByteBuffer.put() ...");
+			System.out.println("\nstart measuring ByteBuffer.put() ...");
 			elapsedTimeSum = 0;
-			for (int t = 0; t < 10000; t++) {
+			for (int t = 0; t < 1000; t++) {
 				random.nextBytes(data);
 
 				long startTime  = System.nanoTime();
@@ -92,23 +90,24 @@ public class RunJniRdma {
 
 				buffer.clear();
 			}
-			System.out.printf("average time of putting %d bytes data into DirectByteBuffer is %.1f ns.\n\n", data.length, (double) elapsedTimeSum/1000);
+			System.out.printf("average time of putting %d bytes data into DirectByteBuffer is %.1f ns.\n", data.length, (double) elapsedTimeSum/1000);
 
-			System.out.println("start measuring rdmaWrite() ...");
+			System.out.println("\nstart measuring rdmaWrite() ...");
 			elapsedTimeSum = 0;
-			for (int t = 0; t < 10000; t++) {
+			for (int t = 0; t < 1000; t++) {
 				random.nextBytes(data);
 				buffer.put(data);
 
 				long startTime  = System.nanoTime();
-				JniRdma.rdmaWrite();    // native method, no need to warm up.
+				JniRdma.rdmaWrite();
 				elapsedTimeSum += System.nanoTime() - startTime;
 
 				buffer.clear();
 			}
-			System.out.printf("average time of RDMA writing %d bytes is %.1f ns.\n\n", data.length, (double) elapsedTimeSum/1000);
+			System.out.printf("average time of RDMA writing %d bytes is %.1f ns.\n", data.length, (double) elapsedTimeSum/1000);
 
-			System.out.println("tell client to shutdown ...");
+			System.out.println("\ntell client to shutdown ...");
+			buffer.order(ByteOrder.LITTLE_ENDIAN);
 			buffer.putInt(Integer.MAX_VALUE);
 			JniRdma.rdmaWriteAsync(0, buffer.position());
 			JniRdma.rdmaPollCq(1);
