@@ -57,44 +57,63 @@ public class RunJniRdma {
 			Random random = new Random();
 			long elapsedTimeSum;
 
-			System.out.println("=== RDMA write benchmarking ===");
+			System.out.println("====== RDMA write benchmarking ======");
+			System.out.println();
 
+			System.out.println("initializing RDMA ...");
 			RdmaUserConfig userConfig = new RdmaUserConfig(524288, null, 9999);
 			ByteBuffer buffer = JniRdma.rdmaInit(userConfig);
+			System.out.println("RDMA buffer info:");
+			System.out.println("- capacity: "    + buffer.capacity()  );
+			System.out.println("- limit: "       + buffer.limit()     );
+			System.out.println("- isDirect: "    + buffer.isDirect()  );
+			System.out.println("- order: "       + buffer.order()     );
+			System.out.println("- isReadOnly: "  + buffer.isReadOnly());
+			System.out.println();
 
-			System.out.println("start messuring DirectByteBuffer.put() ...");
-
-			byte[] data = new byte[userConfig.getBufferSize()];
-			elapsedTimeSum = 0;
-			for (int t = 0; t < 1000; t++) {
-				random.nextBytes(data);
-
-				long startTime = System.nanoTime();
-				buffer.put(data);
-				elapsedTimeSum += System.nanoTime() - startTime;
-
-				buffer.position(0);
-			}
-
-			System.out.printf("average time of putting %d bytes data into DirectByteBuffer is %d ns.\n", data.length, elapsedTimeSum/1000);
-
-			System.out.println("start messuring rdmaWrite() ...");
-
-			elapsedTimeSum = 0;
+			System.out.println("warming up ...");
+			byte[] data = new byte[buffer.limit()];
 			for (int t = 0; t < 1000; t++) {
 				random.nextBytes(data);
 				buffer.put(data);
+				buffer.clear();
+			}
+			System.out.println("done!");
+			System.out.println();
 
-				long startTime = System.nanoTime();
-				JniRdma.rdmaWrite();
-//				JniRdma.rdmaWriteAsync(0, data.length);
-//				JniRdma.rdmaPollCq(1);
+			System.out.println("start measuring ByteBuffer.put() ...");
+			elapsedTimeSum = 0;
+			for (int t = 0; t < 10000; t++) {
+				random.nextBytes(data);
+
+				long startTime  = System.nanoTime();
+				buffer.put(data);
 				elapsedTimeSum += System.nanoTime() - startTime;
 
-				buffer.position(0);
+				buffer.clear();
 			}
+			System.out.printf("average time of putting %d bytes data into DirectByteBuffer is %.1f ns.\n\n", data.length, (double) elapsedTimeSum/1000);
 
-			System.out.printf("average time of RDMA writing %d bytes is %d ns.\n", data.length, elapsedTimeSum/1000);
+			System.out.println("start measuring rdmaWrite() ...");
+			elapsedTimeSum = 0;
+			for (int t = 0; t < 10000; t++) {
+				random.nextBytes(data);
+				buffer.put(data);
+
+				long startTime  = System.nanoTime();
+				JniRdma.rdmaWrite();    // native method, no need to warm up.
+				elapsedTimeSum += System.nanoTime() - startTime;
+
+				buffer.clear();
+			}
+			System.out.printf("average time of RDMA writing %d bytes is %.1f ns.\n\n", data.length, (double) elapsedTimeSum/1000);
+
+			System.out.println("tell client to shutdown ...");
+			buffer.putInt(Integer.MAX_VALUE);
+			JniRdma.rdmaWriteAsync(0, buffer.position());
+			JniRdma.rdmaPollCq(1);
+			buffer.clear();
+
 		} catch (RdmaException e) {
 			System.out.println("RDMA error! check your native IB/OFED/TCP configuration!");
 		} catch (Exception e) {
