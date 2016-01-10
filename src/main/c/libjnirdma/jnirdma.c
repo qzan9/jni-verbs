@@ -26,11 +26,11 @@ static int parse_user_config(JNIEnv *, jobject, struct user_config *);
 static void throwException(JNIEnv *, const char *, const char *);
 
 static const JNINativeMethod methods[] = {
-	{  "rdmaInit",      "(Lac/ncic/syssw/jni/RdmaUserConfig;)Ljava/nio/ByteBuffer;", (void *)rdmaInit       },
-	{ "rdmaWrite",      "()V",                                                       (void *)rdmaWrite      },
+	{       "rdmaInit", "(Lac/ncic/syssw/jni/RdmaUserConfig;)Ljava/nio/ByteBuffer;", (void *)rdmaInit       },
+	{      "rdmaWrite", "()V",                                                       (void *)rdmaWrite      },
 	{ "rdmaWriteAsync", "(II)V",                                                     (void *)rdmaWriteAsync },
-	{ "rdmaPollCq",     "(I)V",                                                      (void *)rdmaWriteAsync },
-	{  "rdmaFree",      "()V",                                                       (void *)rdmaFree       },
+	{     "rdmaPollCq", "(I)V",                                                      (void *)rdmaWriteAsync },
+	{       "rdmaFree", "()V",                                                       (void *)rdmaFree       },
 };
 
 static struct rdma_context *rctx;
@@ -41,7 +41,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved)
 	JNIEnv *env = NULL;
 
 //	if (jvm->GetEnv((void **)&env, JNI_VERSION_1_6) != JNI_OK)
-	if ((*jvm)->GetEnv(jvm, (void **)&env, JNI_VERSION_1_6) != JNI_OK) {    // there is no JNI_VERSION_1_7 constant.
+	if ((*jvm)->GetEnv(jvm, (void **)&env, JNI_VERSION_1_6) != JNI_OK) {
 		return JNI_ERR;
 	}
 
@@ -89,7 +89,7 @@ JNIEXPORT jobject JNICALL rdmaInit(JNIEnv *env, jobject thisObj, jobject userCon
 		return NULL;
 	}
 
-	return (*env)->NewDirectByteBuffer(env, rctx->buf, rctx->size);
+	return (*env)->NewDirectByteBuffer(env, (void *)rctx->buf, (jlong)((long)rctx->size));
 }
 
 JNIEXPORT void JNICALL rdmaWrite(JNIEnv *env, jobject thisObj)
