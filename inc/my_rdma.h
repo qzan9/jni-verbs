@@ -15,12 +15,12 @@ extern "C" {
 #endif /* __cplusplus */
 
 struct user_config {
-	int       ib_dev;
-	int       ib_port;
-	unsigned  buffer_size;
+	int    ib_dev;
+	int    ib_port;
+	int    buffer_size;
 
-	char     *server_name;
-	int       sock_port;
+	char  *server_name;
+	int    sock_port;
 };
 
 struct ib_conn {
@@ -39,7 +39,7 @@ struct rdma_context {
 	struct ibv_pd           *pd;
 	struct ibv_mr           *mr;
 	void                    *buf;
-	unsigned                 size;
+	int                      size;
 
 	struct ibv_comp_channel *ch;
 	struct ibv_cq           *scq;
