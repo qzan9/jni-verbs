@@ -1,7 +1,8 @@
 /*
  * RDMA constructs and "a-bit-higher" level functionalities.
  *
- * Author: azq/@qzan9
+ * Author(s):
+ *   azq  @qzan9  anzhongqi@ncic.ac.cn
  */
 
 #ifndef _MY_RDMA_H_
@@ -33,21 +34,25 @@ struct ib_conn {
 struct rdma_context {
 	struct ibv_device       *dev;
 	struct ibv_context      *dev_ctx;
+	int                      port_num;
+
 	struct ibv_pd           *pd;
 	struct ibv_mr           *mr;
-	struct ibv_comp_channel *ch;
-	struct ibv_cq           *scq;
-	struct ibv_cq           *rcq;
-	struct ibv_qp           *qp;
-	struct ibv_sge           sge_list;
-	struct ibv_send_wr       wr;
-	int                      port_num;
 	void                    *buf;
 	unsigned                 size;
 
-	int                      sockfd;
+	struct ibv_comp_channel *ch;
+	struct ibv_cq           *scq;
+	struct ibv_cq           *rcq;
+
+	struct ibv_qp           *qp;
+	struct ibv_sge           sge_list;
+	struct ibv_send_wr       wr;
+
 	struct ib_conn          *local_conn;
 	struct ib_conn          *remote_conn;
+
+	int                      sockfd;
 };
 
 int init_context(struct rdma_context *, struct user_config *);
