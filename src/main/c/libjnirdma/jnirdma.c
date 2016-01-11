@@ -29,7 +29,7 @@ static const JNINativeMethod methods[] = {
 	{       "rdmaInit", "(Lac/ncic/syssw/jni/RdmaUserConfig;)Ljava/nio/ByteBuffer;", (void *)rdmaInit       },
 	{      "rdmaWrite", "()V",                                                       (void *)rdmaWrite      },
 	{ "rdmaWriteAsync", "(II)V",                                                     (void *)rdmaWriteAsync },
-	{     "rdmaPollCq", "(I)V",                                                      (void *)rdmaWriteAsync },
+	{     "rdmaPollCq", "(I)V",                                                      (void *)rdmaPollCq     },
 	{       "rdmaFree", "()V",                                                       (void *)rdmaFree       },
 };
 
