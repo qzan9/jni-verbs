@@ -163,6 +163,22 @@ int connect_to_peer(struct rdma_context *rctx, struct user_config *ucfg)
 		modify_qp_state_rtr(rctx);
 	}
 
+	// server: prepare the write request.
+	if (!ucfg->server_name) {
+		rctx->sge_list.addr   = (uintptr_t)rctx->buf;
+		rctx->sge_list.length = rctx->size;
+		rctx->sge_list.lkey   = rctx->mr->lkey;
+
+		rctx->wr.wr.rdma.remote_addr = rctx->remote_conn->vaddr;
+		rctx->wr.wr.rdma.rkey        = rctx->remote_conn->rkey;
+		rctx->wr.wr_id               = 3;
+		rctx->wr.sg_list             = &rctx->sge_list;
+		rctx->wr.num_sge             = 1;
+		rctx->wr.opcode              = IBV_WR_RDMA_WRITE;
+		rctx->wr.send_flags          = IBV_SEND_SIGNALED;
+		rctx->wr.next                = NULL;
+	}
+
 	return 0;
 }
 
@@ -172,7 +188,7 @@ int rdma_write(struct rdma_context *rctx)
 	struct ibv_wc wc;
 	int ne;
 
-	rctx->sge_list.addr   = (uintptr_t)rctx->buf;
+/*	rctx->sge_list.addr   = (uintptr_t)rctx->buf;
 	rctx->sge_list.length = rctx->size;
 	rctx->sge_list.lkey   = rctx->mr->lkey;
 
@@ -184,7 +200,7 @@ int rdma_write(struct rdma_context *rctx)
 	rctx->wr.opcode              = IBV_WR_RDMA_WRITE;
 	rctx->wr.send_flags          = IBV_SEND_SIGNALED;
 	rctx->wr.next                = NULL;
-
+*/
 	CHK_NZEI(ibv_post_send(rctx->qp, &rctx->wr, &bad_wr), "ibv_post_send failed! bad mkay!");
 
 	do ne = ibv_poll_cq(rctx->scq, 1, &wc); while (ne == 0);
@@ -206,17 +222,17 @@ int rdma_write_async(struct rdma_context *rctx, int offset, int length)
 
 	rctx->sge_list.addr   = (uintptr_t)(rctx->buf + offset);
 	rctx->sge_list.length = length;
-	rctx->sge_list.lkey   = rctx->mr->lkey;
+//	rctx->sge_list.lkey   = rctx->mr->lkey;
 
 	rctx->wr.wr.rdma.remote_addr = rctx->remote_conn->vaddr + offset;
-	rctx->wr.wr.rdma.rkey        = rctx->remote_conn->rkey;
+/*	rctx->wr.wr.rdma.rkey        = rctx->remote_conn->rkey;
 	rctx->wr.wr_id               = 3;
 	rctx->wr.sg_list             = &rctx->sge_list;
 	rctx->wr.num_sge             = 1;
 	rctx->wr.opcode              = IBV_WR_RDMA_WRITE;
 	rctx->wr.send_flags          = IBV_SEND_SIGNALED;
 	rctx->wr.next                = NULL;
-
+*/
 	CHK_NZEI(ibv_post_send(rctx->qp, &rctx->wr, &bad_wr), "ibv_post_send failed! bad mkay!");
 
 	return 0;
