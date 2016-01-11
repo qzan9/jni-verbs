@@ -46,8 +46,10 @@ public final class U2Unsafe {
 		_UNSAFE.copyMemory(src, BYTE_ARRAY_OFFSET + srcOffset, dest, BYTE_ARRAY_OFFSET + destOffset, length);
 	}
 
-	public static void copyByteArrayToDirectBuffer(byte[] src, long bufferAddress, long length) {
-		_UNSAFE.copyMemory(src, BYTE_ARRAY_OFFSET, null, bufferAddress, length);
+	public static void copyByteArrayToDirectBuffer(byte[] src, long srcOffset, long bufferAddress, long length) {
+		assert srcOffset  >= 0 : "illegal source offset!";
+		assert srcOffset  <= src.length  - length : "illegal source offset!";
+		_UNSAFE.copyMemory(src, BYTE_ARRAY_OFFSET + srcOffset, null, bufferAddress, length);
 	}
 
 	public static void throwException(Throwable t) {
