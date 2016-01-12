@@ -96,7 +96,7 @@ int init_context(struct rdma_context *rctx, struct user_config *ucfg)
 
 	// set up S/R completion queue and CQE notification receiving.
 	CHK_ZEI(rctx->ch  = ibv_create_comp_channel(rctx->dev_ctx), "ibv_create_comp_channel failed!");
-	CHK_ZEI(rctx->scq = ibv_create_cq(rctx->dev_ctx, 64, rctx, rctx->ch, 0), "ibv_create_cq (scq) failed!");
+	CHK_ZEI(rctx->scq = ibv_create_cq(rctx->dev_ctx, 512, rctx, rctx->ch, 0), "ibv_create_cq (scq) failed!");
 	CHK_ZEI(rctx->rcq = ibv_create_cq(rctx->dev_ctx, 1, NULL, NULL, 0), "ibv_create_cq (rcq) failed!");
 
 	// create the queue pair.
@@ -105,7 +105,7 @@ int init_context(struct rdma_context *rctx, struct user_config *ucfg)
 		.recv_cq = rctx->rcq,
 		.qp_type = IBV_QPT_RC,
 		.cap = {
-			.max_send_wr     = 64,
+			.max_send_wr     = 512,
 			.max_recv_wr     = 1,
 			.max_send_sge    = 1,
 			.max_recv_sge    = 1,
