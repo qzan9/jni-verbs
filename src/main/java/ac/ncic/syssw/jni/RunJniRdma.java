@@ -24,7 +24,7 @@ public class RunJniRdma {
 	public static final int DEFAULT_BMK_ITER    = 1000;
 
 	public static final int DEFAULT_BUFFER_SIZE = 524288;
-	public static final int DEFAULT_SLICE_SIZE  = 147456;
+	public static final int DEFAULT_SLICE_SIZE  = 131072;
 
 	private RunJniRdma() { }
 
@@ -151,12 +151,12 @@ public class RunJniRdma {
 				buffer.put(data);
 				JniRdma.rdmaWrite();
 				long startTime = System.nanoTime();
-				buffer.rewind();
 				U2Unsafe.copyByteArrayToDirectBuffer(data, 0, bufferAddress, bufferSize);
 				JniRdma.rdmaWriteAsync(0, bufferSize);
 				JniRdma.rdmaPollCq(1);
 				buffer.clear();
 				if (t%100 == 0) {
+					System.out.printf("getting warmer: ");
 					System.out.println(startTime);
 				}
 			}
@@ -211,7 +211,7 @@ public class RunJniRdma {
 				}
 				elapsedTimeSum += System.nanoTime() - startTime;
 			}
-			System.out.printf("average time of RDMA writing %d bytes is %.1f ns.\n", bufferSize, (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
+			System.out.printf("average time of sliced RDMA writing %d bytes is %.1f ns.\n", bufferSize, (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
 
 			System.out.println("\nbenchmarking async sliced RDMA-write (data NOT re-generated each iteration) ...");
 			elapsedTimeSum = 0;
@@ -225,7 +225,7 @@ public class RunJniRdma {
 				}
 				elapsedTimeSum += System.nanoTime() - startTime;
 			}
-			System.out.printf("average time of RDMA writing %d bytes is %.1f ns.\n", bufferSize, (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
+			System.out.printf("average time of async sliced RDMA writing %d bytes is %.1f ns.\n", bufferSize, (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
 
 			System.out.println("\nbenchmarking 2-stage pipelined RDMA-write (data NOT re-generated each iteration) ...");
 			elapsedTimeSum = 0;
