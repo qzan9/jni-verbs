@@ -55,4 +55,9 @@ public final class JniRdma {
 	 * Free/destroy RDMA resources.
 	 */
 	public static native void rdmaFree();
+
+	/**
+	 * A simple native invocation micro-benchmark.
+	 */
+	public static native long nativeEmpty(long param1, long param2, long param3, long param4, long param5);
 }

@@ -20,6 +20,8 @@ JNIEXPORT void    JNICALL rdmaWriteAsync(JNIEnv *, jobject, jint, jint);
 JNIEXPORT void    JNICALL rdmaPollCq    (JNIEnv *, jobject, jint);
 JNIEXPORT void    JNICALL rdmaFree (JNIEnv *, jobject);
 
+JNIEXPORT jlong   JNICALL nativeEmpty(JNIEnv *, jobject, jlong, jlong, jlong, jlong, jlong);
+
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */
