@@ -80,6 +80,7 @@ int main(int argc, char **argv)
 
 	CHK_NZPI(init_context(rctx, ucfg), "failed to initialize my RDMA context!");
 	CHK_NZPI(connect_to_peer(rctx, ucfg), "failed to connect to peer server!");
+	printf("\n");
 
 	m = *(int *)rctx->buf;
 	while(1) {
