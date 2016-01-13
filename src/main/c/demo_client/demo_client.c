@@ -74,8 +74,9 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-//	printf("buffer size: %d\n", ucfg->buffer_size);
-//	printf("server name: %s\n", ucfg->server_name);
+	printf("buffer size: %d\n", ucfg->buffer_size);
+	printf("server name: %s\n", ucfg->server_name);
+	printf("\n");
 
 	CHK_NZPI(init_context(rctx, ucfg), "failed to initialize my RDMA context!");
 	CHK_NZPI(connect_to_peer(rctx, ucfg), "failed to connect to peer server!");
