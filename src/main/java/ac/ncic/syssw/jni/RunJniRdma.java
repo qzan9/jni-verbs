@@ -7,14 +7,13 @@
 
 package ac.ncic.syssw.jni;
 
-import java.io.InputStream;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import java.util.Random;
 import java.util.Properties;
+import java.util.Date;
 
 import sun.nio.ch.DirectBuffer;
 
@@ -97,10 +96,16 @@ public class RunJniRdma {
 			long elapsedTimeSum;
 
 			InputStream is;
-			Properties prop;
+			PrintStream outLog;
 			Random random;
+			Properties prop;
+			Date date;
+
+			outLog = new PrintStream(new FileOutputStream("jni_log", true));
+			date = new Date();
 
 			System.out.println("\n====== RDMA write benchmarking ======");
+			outLog.println("\n====== " + date.toString() + " ======");
 
 			System.out.println("\nSetting up parameters ...");
 			try {
@@ -120,15 +125,19 @@ public class RunJniRdma {
 				} else {
 					sliceSize = DEFAULT_SLICE_SIZE;
 				}
+
 			} catch (FileNotFoundException e) {
 				System.out.println("jni_config file not found! using DEFAULT configurations!");
 				bufferSize = DEFAULT_BUFFER_SIZE;
 				sliceSize  = DEFAULT_SLICE_SIZE;
-			}/* finally {
+			}/* catch (Exception e) {
+				e.printStackTrace();
+			} finally {
 			}*/
 			System.out.println("Benchmarking configurations:");
 			System.out.println("- buffer size: " + bufferSize);
 			System.out.println("- slice size: "  + sliceSize);
+			outLog.println("buffer size: " + bufferSize + ", slice size: " + sliceSize);
 
 			System.out.println("\ninitializing RDMA ...");
 			userConfig = new RdmaUserConfig(bufferSize, null, 9999);
@@ -184,6 +193,7 @@ public class RunJniRdma {
 				elapsedTimeSum += System.nanoTime() - startTime;
 			}
 			System.out.printf("average time of unsafe.copying %d bytes data into DirectByteBuffer is %.1f ns.\n", sliceSize, (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
+			outLog.printf("UNSAFE COPY %d bytes: %.1f ns.\n", sliceSize, (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
 			elapsedTimeSum = 0;
 			for (int t = 0; t < DEFAULT_BMK_ITER; t++) {
 				long startTime  = System.nanoTime();
@@ -191,6 +201,7 @@ public class RunJniRdma {
 				elapsedTimeSum += System.nanoTime() - startTime;
 			}
 			System.out.printf("average time of unsafe.copying %d bytes data into DirectByteBuffer is %.1f ns.\n", bufferSize, (double)(elapsedTimeSum/DEFAULT_BMK_ITER));
+			outLog.printf("UNSAFE COPY %d bytes: %.1f ns.\n", bufferSize, (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
 
 			System.out.println("\nbenchmarking RDMA-write (data NOT re-generated each iteration) ...");
 			elapsedTimeSum = 0;
@@ -200,6 +211,7 @@ public class RunJniRdma {
 				elapsedTimeSum += System.nanoTime() - startTime;
 			}
 			System.out.printf("average time of RDMA writing %d bytes is %.1f ns.\n", bufferSize, (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
+			outLog.printf("R-WRITE: %.1f ns.\n", (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
 
 			System.out.println("\nbenchmarking sliced RDMA-write (data NOT re-generated each iteration) ...");
 			elapsedTimeSum = 0;
@@ -212,6 +224,7 @@ public class RunJniRdma {
 				elapsedTimeSum += System.nanoTime() - startTime;
 			}
 			System.out.printf("average time of sliced RDMA writing %d bytes is %.1f ns.\n", bufferSize, (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
+			outLog.printf("sliced R-WRITE: %.1f ns.\n", (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
 
 			System.out.println("\nbenchmarking async sliced RDMA-write (data NOT re-generated each iteration) ...");
 			elapsedTimeSum = 0;
@@ -226,6 +239,7 @@ public class RunJniRdma {
 				elapsedTimeSum += System.nanoTime() - startTime;
 			}
 			System.out.printf("average time of async sliced RDMA writing %d bytes is %.1f ns.\n", bufferSize, (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
+			outLog.printf("async sliced R-WRITE: %.1f ns.\n", (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
 
 			System.out.println("\nbenchmarking 2-stage pipelined RDMA-write (data NOT re-generated each iteration) ...");
 			elapsedTimeSum = 0;
@@ -240,28 +254,35 @@ public class RunJniRdma {
 				elapsedTimeSum += System.nanoTime() - startTime;
 			}
 			System.out.printf("average time of 2-stage pipelined RDMA writing %d bytes is %.1f ns.\n", bufferSize, (double) elapsedTimeSum / DEFAULT_BMK_ITER);
+			outLog.printf("2-staged PIPELINING: %.1f ns.\n", (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
 
-			System.out.println("\nbenchmarking fully pipelined RDMA-write (data NOT re-generated each iteration) ...");
-			elapsedTimeSum = 0;
-			for (int t = 0; t < DEFAULT_BMK_ITER; t++) {
-				long startTime  = System.nanoTime();
-				for (int i = 0; i < bufferSize / sliceSize; i++) {
-					U2Unsafe.copyByteArrayToDirectBuffer(data, sliceSize * i, bufferAddress + sliceSize * i, sliceSize);
-					JniRdma.rdmaWriteAsync(sliceSize * i, sliceSize);
+			if (bufferSize % sliceSize == 0) {
+				System.out.println("\nbenchmarking fully pipelined RDMA-write (data NOT re-generated each iteration) ...");
+				elapsedTimeSum = 0;
+				for (int t = 0; t < DEFAULT_BMK_ITER; t++) {
+					long startTime = System.nanoTime();
+					for (int i = 0; i < bufferSize / sliceSize; i++) {
+						U2Unsafe.copyByteArrayToDirectBuffer(data, sliceSize * i, bufferAddress + sliceSize * i, sliceSize);
+						JniRdma.rdmaWriteAsync(sliceSize * i, sliceSize);
+					}
+					for (int i = 0; i < bufferSize / sliceSize; i++) {
+						JniRdma.rdmaPollCq(1);
+					}
+					elapsedTimeSum += System.nanoTime() - startTime;
 				}
-				for (int i = 0; i < bufferSize / sliceSize; i++) {
-					JniRdma.rdmaPollCq(1);
-				}
-				elapsedTimeSum += System.nanoTime() - startTime;
+				System.out.printf("average time of fully pipelined RDMA writing %d bytes is %.1f ns.\n", bufferSize, (double) elapsedTimeSum / DEFAULT_BMK_ITER);
+				outLog.printf("full PIPELINING: %.1f ns.\n", (double) (elapsedTimeSum / DEFAULT_BMK_ITER));
+
+				System.out.println("\ntell client to shutdown ...");
+				buffer.clear();
+				buffer.order(ByteOrder.nativeOrder());
+				buffer.putInt(Integer.MAX_VALUE);
+				JniRdma.rdmaWriteAsync(0, buffer.position());
+				JniRdma.rdmaPollCq(1);
 			}
-			System.out.printf("average time of fully pipelined RDMA writing %d bytes is %.1f ns.\n", bufferSize, (double) elapsedTimeSum / DEFAULT_BMK_ITER);
 
-			System.out.println("\ntell client to shutdown ...");
-			buffer.clear();
-			buffer.order(ByteOrder.nativeOrder());
-			buffer.putInt(Integer.MAX_VALUE);
-			JniRdma.rdmaWriteAsync(0, buffer.position());
-			JniRdma.rdmaPollCq(1);
+			outLog.println();
+			outLog.close();
 
 		} catch (RdmaException e) {
 			System.out.println("RDMA error! check your native IB/OFED/TCP configuration!");
