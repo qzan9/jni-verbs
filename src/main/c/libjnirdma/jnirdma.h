@@ -11,16 +11,14 @@
 extern "C" {
 #endif /* __cplusplus */
 
-JNIEXPORT jint JNICALL JNI_Onload  (JavaVM *, void *);
+JNIEXPORT jint JNICALL JNI_Onload(JavaVM *, void *);
 //JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *, void *);
 
-JNIEXPORT jobject JNICALL rdmaInit (JNIEnv *, jobject, jobject);
+JNIEXPORT jobject JNICALL rdmaInit(JNIEnv *, jobject, jobject);
 JNIEXPORT void    JNICALL rdmaWrite(JNIEnv *, jobject);
 JNIEXPORT void    JNICALL rdmaWriteAsync(JNIEnv *, jobject, jint, jint);
-JNIEXPORT void    JNICALL rdmaPollCq    (JNIEnv *, jobject, jint);
-JNIEXPORT void    JNICALL rdmaFree (JNIEnv *, jobject);
-
-JNIEXPORT jlong   JNICALL nativeEmpty(JNIEnv *, jobject, jlong, jlong, jlong, jlong, jlong);
+JNIEXPORT void    JNICALL rdmaPollCq(JNIEnv *, jobject, jint);
+JNIEXPORT void    JNICALL rdmaFree(JNIEnv *, jobject);
 
 #ifdef __cplusplus
 }

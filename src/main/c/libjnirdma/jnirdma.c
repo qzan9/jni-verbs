@@ -31,8 +31,6 @@ static const JNINativeMethod methods[] = {
 	{ "rdmaWriteAsync", "(II)V",                                                     (void *)rdmaWriteAsync },
 	{     "rdmaPollCq", "(I)V",                                                      (void *)rdmaPollCq     },
 	{       "rdmaFree", "()V",                                                       (void *)rdmaFree       },
-
-	{    "nativeEmpty", "(JJJJJ)J",                                                  (void *)nativeEmpty    },
 };
 
 static struct rdma_context *rctx;
@@ -129,13 +127,6 @@ JNIEXPORT void JNICALL rdmaFree(JNIEnv *env, jobject thisObj)
 	free(rctx);
 
 	return;
-}
-
-
-JNIEXPORT jlong JNICALL nativeEmpty(JNIEnv *env, jobject thisObj,
-                                    jlong param1, jlong param2, jlong param3, jlong param4, jlong param5)
-{
-	return (jlong)(param1 + param2 + param3 + param4 + param5);
 }
 
 static int parse_user_config(JNIEnv *env, jobject userConfig, struct user_config *ucfg)
