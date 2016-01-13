@@ -25,14 +25,11 @@ public final class JniRdma {
 	 * operations and a DirectByteBuffer is returned.
 	 *
 	 * <p>
-	 * This is still early demo, and is just for peer-to-peer test. For a
-	 * buffer of size <code>bufferSize</code>, a native buffer of size
-	 * <code>bufferSize*2</code> is actually allocated, with the first half
-	 * for write and second half for read.
+	 * This is still early demo, and is just for peer-to-peer test.
 	 *
 	 * @param userConfig user configuration data.
 	 *
-	 * @return an MR DirectByteBuffer.
+	 * @return a registered DirectByteBuffer.
 	 */
 	public static native ByteBuffer rdmaInit(RdmaUserConfig userConfig) throws RdmaException;
 
@@ -42,7 +39,7 @@ public final class JniRdma {
 	public static native void rdmaWrite() throws RdmaException;
 
 	/**
-	 * Perform asynchronous RDMA write operation.
+	 * Perform "asynchronous" RDMA write operation.
 	 */
 	public static native void rdmaWriteAsync(int offset, int length) throws RdmaException;
 
@@ -56,8 +53,4 @@ public final class JniRdma {
 	 */
 	public static native void rdmaFree();
 
-	/**
-	 * A simple native invocation micro-benchmark.
-	 */
-	public static native long nativeEmpty(long param1, long param2, long param3, long param4, long param5);
 }
