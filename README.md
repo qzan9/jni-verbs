@@ -33,7 +33,6 @@ InfiniBand refers to two distinctly different things:
 
 (LINUX) check the kernel modules
 
-```
     # lsmod | grep -i ib
     ib_addr                 6345  2 rdma_ucm,rdma_cm
     ib_ipoib               80819  0
@@ -52,7 +51,6 @@ InfiniBand refers to two distinctly different things:
     rdma_ucm               16141  0
     rdma_cm                36810  1 rdma_ucm
     iw_cm                   8867  1 rdma_cm
-```
 
 verify that low-level HW driver (in this case `mlx4_core` and `mlx4_ib`) and
 mid-layer core (`ib_core`, `ib_uverbs`, etc.) are loaded. you can customize
@@ -60,13 +58,11 @@ RDMA modules in kernel's build menu `Device Drivers` -> `InfiniBand support`.
 
 under RHEL/CentOS 6.x, one lazy way to install OFED packages
 
-```
     # yum update
     # yum groupinstall "Infiniband Support"
     # chkconfig rdma on
     # chkconfig opensm on
     # shutdown -r now
-```
 
 the "must-install" user-space packages are userspace driver (for Mellanox, it's
 `libmlx4` or `libmlx5` or `libmthca`) and verbs library (`libibverbs`). you may
@@ -79,7 +75,6 @@ MLNX-OFED).
 to verify local RDMA device and query device attributes, use `ibv_devices` and
 `ibv_devinfo` (both contained in package `libibverbs-utils`), e.g.,
 
-```
     # ibv_devices
         device                 node GUID
         ------              ----------------
@@ -114,7 +109,6 @@ to verify local RDMA device and query device attributes, use `ibv_devices` and
                             port_lid:               0
                             port_lmc:               0x00
                             link_layer:             InfiniBand
-```
 
 ## JVM/JDK ##
 
@@ -124,21 +118,20 @@ to configure Java environemnt, download the JDK tarball (from Oracle) and
 extract (to your home directory or some other locations) and set-up
 (`$JAVA_HOME`, `PATH`, etc.), or simply (under Ubuntu 14.04)
 
-```
     $ sudo apt-add-repository ppa:webupd8team/java
     $ sudo apt-get update
     $ sudo apt-get install oracle-java7-installer
     $ sudo apt-get install oracle-java7-set-default
-```
 
 note that `JNI_VERSION_1_6` is required.
 
 you can use Maven to compile the codes and build the jar; Eclipse and Idea
 would also be able to do the job.
 
-# Current Prototype #
+# Current Implementations #
 
-prototypes, tests and idea demonstrations: tried and true.
+current codes are primarily prototypes, tests or idea demonstrations (tried and
+true):
 
 * IBV programming demos: `src/main/c/ibv_***`.
 
@@ -151,6 +144,9 @@ prototypes, tests and idea demonstrations: tried and true.
   `rdmaWrite()` to perform RDMA operations when data in the `ByteBuffer` is
   ready. after done, call `rdmaFree()` to release native IBV resources.
 
+  `src/mai/java/.../RunJniRdma` provides a set of micro-benchmarks for
+  analyzing JNI/IB characteristics.
+
 * JNI-Verbs case: `src/main/c/libjniverbs` and `src/main/java/.../JniVerbs`.
 
   a bunch of "struct-to-class, function-to-method" peer-to-peer wrappers of
@@ -159,14 +155,16 @@ prototypes, tests and idea demonstrations: tried and true.
   this takes time to code, but is much more flexible, and good understanding
   of RDMA is required.
 
-use `make` (`Makefile`) to build native codes; remember to edit `inc/common.mk`
-to set up your `JAVA_HOME`.
+to build the codes:
 
-use `mvn` (`pom.xml`) to compile Java codes and generate JAR packages, or
-import the codes into your IDE (Eclipse, Idea) to build.
+* use `make` (`Makefile`) to build native codes; remember to edit
+  `inc/common.mk` to set up your own `JAVA_HOME`.
 
-to execute by command line `java`, use property `-Djava.library.path` to
-specify `path/to/lib***.so`.
+* use `mvn` (`pom.xml`) to compile Java codes and generate JAR packages, or
+  import the codes into your IDE (Eclipse, Idea) to build.
+
+* to execute by command line `java`, use property `-Djava.library.path` to
+  specify `path/to/lib***.so`.
 
 [1]: https://www.openfabrics.org
 
