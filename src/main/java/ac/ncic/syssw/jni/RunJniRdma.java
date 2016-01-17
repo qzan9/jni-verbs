@@ -146,6 +146,7 @@ public class RunJniRdma {
 			System.out.println("initializing RDMA ...");
 			userConfig = new RdmaUserConfig(bufferSize, null, 9999);
 			ByteBuffer buffer = JniRdma.rdmaInit(userConfig);
+			System.out.println();
 			System.out.println("RDMA buffer info:");
 			System.out.println("- capacity: "    + buffer.capacity()  );
 			System.out.println("- limit: "       + buffer.limit()     );
@@ -216,6 +217,19 @@ public class RunJniRdma {
 			ps.println();
 
 			for (sliceSize = 2048; sliceSize < bufferSize; sliceSize *= 2) {
+
+				System.out.println();
+				System.out.println("benchmarking Unsafe.copyMemory (data NOT re-generated each iteration) ...");
+				startTime = System.nanoTime();
+				for (int t = 0; t < DEFAULT_BMK_ITER; t++) {
+					U2Unsafe.copyByteArrayToDirectBuffer(data, 0, bufferAddress, sliceSize);
+				}
+				elapsedTime = System.nanoTime() - startTime;
+				System.out.printf("average time of %dB unsafe.copying into DirectByteBuffer is %.1f ns.", sliceSize, (double) elapsedTime / DEFAULT_BMK_ITER);
+				System.out.println();
+				ps.printf("UNSAFE COPY %d bytes: %.1f ns.", sliceSize, (double) elapsedTime / DEFAULT_BMK_ITER);
+				ps.println();
+
 				System.out.println();
 				System.out.println("benchmarking sliced RDMA-write (data NOT re-generated each iteration) ...");
 				startTime = System.nanoTime();
@@ -226,7 +240,7 @@ public class RunJniRdma {
 					}
 				}
 				elapsedTime = System.nanoTime() - startTime;
-				System.out.printf("average time of %d-sliced RDMA writing %d bytes is %.1f ns.", sliceSize, bufferSize, (double) elapsedTime / DEFAULT_BMK_ITER);
+				System.out.printf("average time of %dB-sliced RDMA writing %d bytes is %.1f ns.", sliceSize, bufferSize, (double) elapsedTime / DEFAULT_BMK_ITER);
 				System.out.println();
 				ps.printf("R-WRITE %d bytes sliced: %.1f ns.", sliceSize, (double) elapsedTime / DEFAULT_BMK_ITER);
 				ps.println();
@@ -248,17 +262,6 @@ public class RunJniRdma {
 				ps.printf("R-WRITE %d bytes sliced and async: %.1f ns.", sliceSize, (double) elapsedTime / DEFAULT_BMK_ITER);
 				ps.println();
 
-				System.out.println();
-				System.out.println("benchmarking Unsafe.copyMemory (data NOT re-generated each iteration) ...");
-				startTime = System.nanoTime();
-				for (int t = 0; t < DEFAULT_BMK_ITER; t++) {
-					U2Unsafe.copyByteArrayToDirectBuffer(data, 0, bufferAddress, sliceSize);
-				}
-				elapsedTime = System.nanoTime() - startTime;
-				System.out.printf("average time of unsafe.copying %d bytes data into DirectByteBuffer is %.1f ns.", sliceSize, (double) elapsedTime / DEFAULT_BMK_ITER);
-				System.out.println();
-				ps.printf("UNSAFE COPY %d bytes: %.1f ns.", sliceSize, (double) elapsedTime / DEFAULT_BMK_ITER);
-				ps.println();
 
 				System.out.println();
 				System.out.println("benchmarking fully pipelined RDMA-write (data NOT re-generated each iteration) ...");
