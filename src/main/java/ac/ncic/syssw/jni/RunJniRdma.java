@@ -35,25 +35,6 @@ public class RunJniRdma {
 		return INSTANCE;
 	}
 
-	public void simpleTestJniVerbs() {
-		long devListAddr = -1;
-		try {
-			MutableInteger devNum = new MutableInteger(-1);
-			devListAddr = JniVerbs.ibvGetDeviceList(devNum);
-			System.out.printf("virtual address of device list: %#x.\n", devListAddr);
-			System.out.printf("%d devices found.\n", devNum.intValue());
-			for (int i = 0; i < devNum.intValue(); i++)
-				System.out.printf("%d: %s %#x\n", i, JniVerbs.ibvGetDeviceName(devListAddr, i), JniVerbs.ibvGetDeviceGUID(devListAddr, i));
-		} catch (VerbsException e) {
-			System.out.println("check your IB/OFED configuration!");
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			if (devListAddr != -1)    // this is not safe for Java.
-				JniVerbs.ibvFreeDeviceList(devListAddr);
-		}
-	}
-
 	public void simpleTestJniRdma(String[] args) {
 		try {
 			RdmaUserConfig userConfig = new RdmaUserConfig(DEFAULT_BUFFER_SIZE, (args.length == 0) ? null : args[0], 9999);

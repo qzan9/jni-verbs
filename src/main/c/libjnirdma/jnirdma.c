@@ -20,10 +20,22 @@
 #include <my_rdma.h>
 #include <chk_err.h>
 
-#include "jnirdma.h"
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-static int parse_user_config(JNIEnv *, jobject, struct user_config *);
-static void throwException(JNIEnv *, const char *, const char *);
+JNIEXPORT jint JNICALL JNI_Onload(JavaVM *, void *);
+//JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *, void *);
+
+JNIEXPORT jobject JNICALL rdmaInit(JNIEnv *, jobject, jobject);
+JNIEXPORT void    JNICALL rdmaWrite(JNIEnv *, jobject);
+JNIEXPORT void    JNICALL rdmaWriteAsync(JNIEnv *, jobject, jint, jint);
+JNIEXPORT void    JNICALL rdmaPollCq(JNIEnv *, jobject, jint);
+JNIEXPORT void    JNICALL rdmaFree(JNIEnv *, jobject);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 static const JNINativeMethod methods[] = {
 	{       "rdmaInit", "(Lac/ncic/syssw/jni/RdmaUserConfig;)Ljava/nio/ByteBuffer;", (void *)rdmaInit       },
@@ -32,6 +44,9 @@ static const JNINativeMethod methods[] = {
 	{     "rdmaPollCq", "(I)V",                                                      (void *)rdmaPollCq     },
 	{       "rdmaFree", "()V",                                                       (void *)rdmaFree       },
 };
+
+static int parse_user_config(JNIEnv *, jobject, struct user_config *);
+static void throwException(JNIEnv *, const char *, const char *);
 
 static struct rdma_context *rctx;
 static struct user_config  *ucfg;

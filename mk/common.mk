@@ -15,7 +15,7 @@ OBJFILES     := $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(CFILES))) \
 TARGETFILE   := $(OUTPUTDIR)/$(PROJECT)
 
 # Java path
-JAVA_HOME    := /opt/jdk7
+JAVA_HOME    ?= /opt/jdk7
 
 # compiler setup
 AMD64 = $(shell uname -m | grep 64)

@@ -53,7 +53,7 @@ int init_context(struct rdma_context *rctx, struct user_config *ucfg)
 
 	srand48(getpid()*time(NULL));
 
-//	CHKE_NZ(ibv_fork_init(), "ibv_fork_init failed!");
+	//CHKE_NZ(ibv_fork_init(), "ibv_fork_init failed!");
 
 	// check local IB devices.
 	CHK_ZEI(dev_list = ibv_get_device_list(&num_devices), "ibv_get_device_list failed!");

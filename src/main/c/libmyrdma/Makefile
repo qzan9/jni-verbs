@@ -1,7 +1,7 @@
 # project files
 PROJECT  := libmyrdma
 
-CFILES   := my_rdma.c
+CFILES   := myrdma.c
 DEPFILES :=
 
 shared   := 1
