@@ -32,7 +32,7 @@
 
 #include <infiniband/verbs.h>
 
-#include <my_rdma.h>
+#include <myrdma.h>
 #include <chk_err.h>
 
 static int modify_qp_state_init(struct rdma_context *);
