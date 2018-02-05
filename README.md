@@ -8,11 +8,11 @@ InfiniBand refers to two distinctly different things:
 
 * a higher level programming API called the InfiniBand Verbs API, which is an implementation of RDMA technology.
 
-# How to make Java RDMA-enabled? #
+# How to make Java RDMA-enabled?
 
-* full JVM integration of `libibverbs`/`librdmacm`; modifications to JVM specification and implementation required.
+* full JVM integration of `libibverbs` and `librdmacm`: modifications to JVM specification and implementation required.
 
-* use JNI to attach to `libibverbs`/`librdmacm`.
+* use JNI to attach to `libibverbs` and `librdmacm`
 
   - "struct-to-class, function-to-method" one-to-one mapping and wrapping: expose whole RDMA concepts (and native C stuff) to Java.
 
@@ -22,11 +22,11 @@ InfiniBand refers to two distinctly different things:
 
   implement OFED I/O protocol and talk directly to `/dev/ib_verbs`: open the device file and communicate with kernel via RDMA ABI totally in Java.
 
-# Environment Setup #
+# Environment Setup
 
-## OFED RDMA Stack ##
+## OFED RDMA Stack
 
-### Kernel Drivers ###
+### Kernel Drivers
 
 (LINUX) check the kernel modules
 
@@ -43,7 +43,7 @@ InfiniBand refers to two distinctly different things:
     ib_mthca              134305  1
     ib_mad                 39175  6 ib_cm,ib_umad,ib_qib,mlx4_ib,ib_sa,ib_mthca
     ib_core                74153  17 rdma_ucm,rdma_cm,iw_cm,ib_ipoib,ib_cm,ib_uverbs,ib_umad,ocrdma,iw_nes,iw_cxgb4,iw_cxgb3,ib_qib,mlx5_ib,mlx4_ib,ib_sa,ib_mthca,ib_mad
-
+    
     # lsmod | grep -i rdma
     rdma_ucm               16141  0
     rdma_cm                36810  1 rdma_ucm
@@ -51,7 +51,7 @@ InfiniBand refers to two distinctly different things:
 
 verify that low-level HW driver (in this case `mlx4_core` and `mlx4_ib`) and mid-layer core (`ib_core`, `ib_uverbs`, etc.) are loaded. you can customize RDMA modules in kernel's build menu `Device Drivers` -> `InfiniBand support`.
 
-### Userspace Libraries ###
+### Userspace Libraries
 
 under RHEL/CentOS 6.x, one lazy way to install OFED packages
 
@@ -101,7 +101,7 @@ here are the packages provided by the "Infiniband Support"
        qperf
        srptools
 
-the **"must-install"** user-space packages include userspace driver (for Mellanox, it's `libmlx4` or `libmlx5` or `libmthca`) and verbs library (`libibverbs`).
+the **"must-install"** user-space packages include userspace driver (for Mellanox, it's `libmlx4` or `libmlx5` or `libmthca`) and verbs library (`libibverbs`). for development, `libibverbs-devel` should be installed.
 
 other installation options include downloading OFED package tarball from [openfabrics.org][1] or using vendor-specific OFED distribution (such as MLNX-OFED).
 
@@ -139,7 +139,7 @@ to check the basic IB connection info, use `ibstat` or `ibstatus` (contained in 
             rate:            40 Gb/sec (4X QDR)
             link_layer:      InfiniBand
 
-## JVM/JDK ##
+## JVM/JDK
 
 Oracle/Sun HotSpot JVM 1.7 is recommended.
 
@@ -154,7 +154,7 @@ note that at least `JNI_VERSION_1_6` is required.
 
 you can use Maven to compile the codes and build the jar; Eclipse and Idea would also be able to do the job.
 
-# Current Implementations #
+# Current Implementations
 
 current codes are primarily prototypes, tests or idea demonstrations (tried and true):
 
@@ -183,4 +183,3 @@ to build the codes:
 * to execute by command line `java`, use property `-Djava.library.path` to specify `path/to/lib***.so`.
 
 [1]: https://www.openfabrics.org
-
