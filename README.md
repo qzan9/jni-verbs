@@ -8,7 +8,7 @@ InfiniBand refers to two distinctly different things:
 
 * a higher level programming API called the InfiniBand Verbs API, which is an implementation of RDMA technology.
 
-# How to make Java RDMA-enabled?
+## How to make Java RDMA-enabled? ##
 
 * full JVM integration of `libibverbs` and `librdmacm`: modifications to JVM specification and implementation required.
 
@@ -22,13 +22,11 @@ InfiniBand refers to two distinctly different things:
 
   implement OFED I/O protocol and talk directly to `/dev/ib_verbs`: open the device file and communicate with kernel via RDMA ABI totally in Java.
 
-# Environment Setup
+## Environment Setup ##
 
-## OFED RDMA Stack
+### OFED RDMA Stack ###
 
-### Kernel Drivers
-
-(LINUX) check the kernel modules
+check the kernel modules
 
     # lsmod | grep -i ib
     ib_addr                 6345  2 rdma_ucm,rdma_cm
@@ -50,8 +48,6 @@ InfiniBand refers to two distinctly different things:
     iw_cm                   8867  1 rdma_cm
 
 verify that low-level HW driver (in this case `mlx4_core` and `mlx4_ib`) and mid-layer core (`ib_core`, `ib_uverbs`, etc.) are loaded. you can customize RDMA modules in kernel's build menu `Device Drivers` -> `InfiniBand support`.
-
-### Userspace Libraries
 
 under RHEL/CentOS 6.x, one lazy way to install OFED packages
 
@@ -139,7 +135,7 @@ to check the basic IB connection info, use `ibstat` or `ibstatus` (contained in 
             rate:            40 Gb/sec (4X QDR)
             link_layer:      InfiniBand
 
-## JVM/JDK
+### JVM/JDK ###
 
 Oracle/Sun HotSpot JVM 1.7 is recommended.
 
@@ -154,7 +150,7 @@ note that at least `JNI_VERSION_1_6` is required.
 
 you can use Maven to compile the codes and build the jar; Eclipse and Idea would also be able to do the job.
 
-# Current Implementations
+## Current Implementations ##
 
 current codes are primarily prototypes, tests or idea demonstrations (tried and true):
 
@@ -183,3 +179,4 @@ to build the codes:
 * to execute by command line `java`, use property `-Djava.library.path` to specify `path/to/lib***.so`.
 
 [1]: https://www.openfabrics.org
+
